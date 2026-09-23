@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#202226" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Retro Deck" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>JW Retro Deck</title>
+</head>
+<body>
+  <div id="app" class="app skin-classic">
+    <header class="topbar">
+      <button class="iconBtn" id="homeBtn" aria-label="Home">⌂</button>
+      <div class="brandLockup">
+        <div class="brandMark">JW</div>
+        <div><strong>RETRO DECK</strong><span>by JW Eds</span></div>
+      </div>
+      <div class="topActions">
+        <button class="iconBtn" id="achievementsBtn" aria-label="Achievements">★</button>
+        <button class="iconBtn" id="settingsBtn" aria-label="Settings">⚙</button>
+      </div>
+    </header>
+
+    <main id="libraryView" class="view libraryView active">
+      <section class="hero">
+        <p class="eyebrow">HAND-PICKED • NO FILLER</p>
+        <h1>Pick a game.</h1>
+        <p>One adaptable retro console. Controls change only when the game needs them.</p>
+      </section>
+      <section id="gameGrid" class="gameGrid" aria-label="Game library"></section>
+      <button class="requestTile" id="requestGameBtn"><span>＋</span><strong>Request another game</strong><small>Queue a title for future research or an original tribute build.</small></button>
+    </main>
+
+    <main id="consoleView" class="view consoleView">
+      <div id="rotatePrompt" class="rotatePrompt hidden">
+        <div class="rotatePhone">▭↻</div>
+        <h2>Turn your device sideways</h2>
+        <p>This game uses movement and action buttons together.</p>
+      </div>
+
+      <div id="consoleShell" class="consoleShell">
+        <div class="consoleChrome">
+          <div class="etched">JW EDS</div>
+          <button id="menuBtn" class="systemBtn">MENU</button>
+          <button id="pauseBtn" class="systemBtn">PAUSE</button>
+        </div>
+
+        <div class="controlZone leftZone">
+          <div id="dpad" class="dpad" aria-label="Directional pad">
+            <button data-key="up" class="dpadBtn up">▲</button>
+            <button data-key="left" class="dpadBtn left">◀</button>
+            <div class="dpadCenter"></div>
+            <button data-key="right" class="dpadBtn right">▶</button>
+            <button data-key="down" class="dpadBtn down">▼</button>
+          </div>
+        </div>
+
+        <section class="screenBezel">
+          <div class="screenTopline"><span id="gameTitle">GAME</span><span id="hudText"></span></div>
+          <canvas id="gameCanvas" width="960" height="540" aria-label="Game screen"></canvas>
+          <div id="toast" class="toast hidden"></div>
+        </section>
+
+        <div class="controlZone rightZone">
+          <div id="actionPad" class="actionPad" aria-label="Action buttons">
+            <button data-key="x" class="actionBtn btnX">X</button>
+            <button data-key="y" class="actionBtn btnY">Y</button>
+            <button data-key="a" class="actionBtn btnA">A</button>
+            <button data-key="b" class="actionBtn btnB">B</button>
+          </div>
+          <div id="mirrorPad" class="mirrorPad hidden" aria-label="Alternate movement controls">
+            <button data-key="up" class="mirrorBtn up">▲</button>
+            <button data-key="left" class="mirrorBtn left">◀</button>
+            <button data-key="right" class="mirrorBtn right">▶</button>
+            <button data-key="down" class="mirrorBtn down">▼</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <dialog id="menuDialog" class="panelDialog">
+      <form method="dialog" class="dialogCard">
+        <div class="dialogHeader"><div><span class="eyebrow">SYSTEM</span><h2 id="menuGameName">Game menu</h2></div><button value="cancel" class="closeBtn">×</button></div>
+        <button type="button" id="resumeBtn" class="wideBtn primary">Resume</button>
+        <button type="button" id="restartBtn" class="wideBtn">Restart game</button>
+        <button type="button" id="howToBtn" class="wideBtn">Controls & how to play</button>
+        <button type="button" id="exitGameBtn" class="wideBtn danger">Exit to library</button>
+      </form>
+    </dialog>
+
+    <dialog id="infoDialog" class="panelDialog">
+      <form method="dialog" class="dialogCard"><div class="dialogHeader"><div><span class="eyebrow">HOW TO PLAY</span><h2 id="infoTitle"></h2></div><button value="cancel" class="closeBtn">×</button></div><div id="infoBody" class="infoBody"></div></form>
+    </dialog>
+
+    <dialog id="settingsDialog" class="panelDialog largeDialog">
+      <form method="dialog" class="dialogCard">
+        <div class="dialogHeader"><div><span class="eyebrow">CUSTOMISE</span><h2>Appearance & controls</h2></div><button value="cancel" class="closeBtn">×</button></div>
+        <section><h3>Console skins</h3><div id="skinGrid" class="skinGrid"></div></section>
+        <section class="settingSection"><h3>Button colours</h3><div class="colourGrid">
+          <label>D-pad <input id="dpadColour" type="color" value="#202226"></label>
+          <label>A <input id="aColour" type="color" value="#e84b4b"></label>
+          <label>B <input id="bColour" type="color" value="#f2cc40"></label>
+          <label>X <input id="xColour" type="color" value="#4c83f1"></label>
+          <label>Y <input id="yColour" type="color" value="#4bc27b"></label>
+        </div></section>
+        <section class="settingSection"><h3>Play preferences</h3>
+          <label class="switchRow"><span>Haptics where supported</span><input id="hapticsToggle" type="checkbox" checked></label>
+          <label class="switchRow"><span>Game sound</span><input id="soundToggle" type="checkbox" checked></label>
+        </section>
+        <button id="resetAppearanceBtn" type="button" class="wideBtn">Reset appearance</button>
+      </form>
+    </dialog>
+
+    <dialog id="achievementsDialog" class="panelDialog largeDialog">
+      <form method="dialog" class="dialogCard"><div class="dialogHeader"><div><span class="eyebrow">PROGRESS</span><h2>Achievements & unlocks</h2></div><button value="cancel" class="closeBtn">×</button></div><div id="achievementList" class="achievementList"></div></form>
+    </dialog>
+
+    <dialog id="requestDialog" class="panelDialog">
+      <form method="dialog" class="dialogCard" id="requestForm">
+        <div class="dialogHeader"><div><span class="eyebrow">GAME REQUEST</span><h2>Add to the research queue</h2></div><button value="cancel" class="closeBtn">×</button></div>
+        <label class="field">Game title<input id="requestTitle" required placeholder="e.g. Alex Kidd in Miracle World"></label>
+        <label class="field">Original platform<input id="requestPlatform" placeholder="e.g. Master System"></label>
+        <label class="field">What matters most<textarea id="requestNotes" rows="3" placeholder="Exact feel, a particular level, soundtrack, controls..."></textarea></label>
+        <p class="smallNote">This PWA stores requests locally. A future backend can perform automated research; the browser alone cannot reliably run background web searches on iPhone.</p>
+        <button type="submit" class="wideBtn primary">Save request</button>
+        <button type="button" id="copyResearchBtn" class="wideBtn">Copy research prompt</button>
+        <div id="requestList" class="requestList"></div>
+      </form>
+    </dialog>
+  </div>
+<script src="./app.js"></script>
+</body>
+</html>
