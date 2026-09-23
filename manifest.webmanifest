@@ -1,7 +1,7 @@
 {
   "name": "JW Retro Deck",
   "short_name": "Retro Deck",
-  "description": "A curated nostalgic handheld game deck with adaptive controls and original-cartridge emulation support.",
+  "description": "JW Retro Deck: a personal multi-system ROM library with adaptive browser emulation, stored cover art, and built-in Snake and Table Tennis.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

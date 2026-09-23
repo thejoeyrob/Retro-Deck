@@ -23,6 +23,7 @@ let originalMode=false, originalRomBytes=null, javatariReady=false, javatariLoad
 
 function originalKeyCode(k){return ({up:38,down:40,left:37,right:39,a:32,b:32,x:32,y:32})[k]}
 function routeControl(k,v){
+  if(window.RetroDeckROM?.routeControl?.(k,v))return;
   if(originalMode&&javatariReady&&window.Javatari?.room?.consoleControls){
     const code=originalKeyCode(k); if(code) Javatari.room.consoleControls.processKey(code,v);
     return;
@@ -51,26 +52,21 @@ document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea
 document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 
 const achievements={
-  snake10:{title:'Snake Charmer',desc:'Reach 10 points in Snake.',reward:'Unlocks Neon Circuit skin'},
-  blocks10:{title:'Stack Master',desc:'Clear 10 lines in Block Stack.',reward:'Unlocks Sunset skin'},
-  mountainCrown:{title:'Crown Bearer',desc:'Claim the crown in Mountain King Tribute.',reward:'Unlocks Carbon skin'},
-  mountainTop:{title:'Mountain King',desc:'Escape to the summit with the crown.',reward:'Permanent gold crown badge'},
-  play3:{title:'Arcade Regular',desc:'Play three different games.',reward:'Unlocks Arcade Carpet skin'},
-  brawl3:{title:'Street Clean-up',desc:'Clear three waves in Street Brawl.',reward:'Bragging rights'}
+  snake10:{title:'Snake Charmer',desc:'Reach 10 points in Snake.',reward:'Unlocks Neon Circuit skin'}
 };
 function unlock(id){if(!stats.achievements[id]){stats.achievements[id]=Date.now();saveAll();toast(`Achievement: ${achievements[id].title}`);renderAchievements();renderSkins()}}
-function markPlayed(id){if(!stats.played.includes(id)){stats.played.push(id);if(stats.played.length>=3)unlock('play3');saveAll()}}
+function markPlayed(id){if(!stats.played.includes(id)){stats.played.push(id);saveAll()}}
 function highScore(id,val){stats.high[id]=Math.max(stats.high[id]||0,Math.floor(val||0));saveAll()}
 
 const skins=[
-  {id:'classic',name:'Classic Grey',swatch:'linear-gradient(135deg,#c2c0b2,#89887e)',unlock:null},
-  {id:'charcoal',name:'Charcoal',swatch:'linear-gradient(135deg,#4b4d53,#1e2023)',unlock:null},
-  {id:'red',name:'Rally Red',swatch:'linear-gradient(135deg,#d64b50,#74242a)',unlock:null},
-  {id:'ice',name:'Ice Blue',swatch:'linear-gradient(135deg,#d5e8ef,#7693a3)',unlock:null},
-  {id:'neon',name:'Neon Circuit',swatch:'repeating-linear-gradient(135deg,#34214d 0 10px,#111226 10px 20px)',unlock:'snake10'},
-  {id:'sunset',name:'Sunset',swatch:'linear-gradient(135deg,#ffb06a,#d35672,#623a76)',unlock:'blocks10'},
-  {id:'carbon',name:'Carbon',swatch:'repeating-linear-gradient(45deg,#333 0 4px,#171717 4px 8px)',unlock:'mountainCrown'},
-  {id:'arcade',name:'Arcade Carpet',swatch:'radial-gradient(#f4d35e 1px,transparent 1px),radial-gradient(#ed6a5a 1px,#24182d 1px)',unlock:'play3'}
+  {id:'classic',name:'Classic Grey',unlock:null},
+  {id:'charcoal',name:'Charcoal',unlock:null},
+  {id:'red',name:'Rally Red',unlock:null},
+  {id:'ice',name:'Ice Blue',unlock:null},
+  {id:'neon',name:'Neon Circuit',unlock:'snake10'},
+  {id:'sunset',name:'Sunset',unlock:null},
+  {id:'carbon',name:'Carbon',unlock:null},
+  {id:'arcade',name:'Arcade Carpet',unlock:null}
 ];
 function skinUnlocked(s){return !s.unlock||!!stats.achievements[s.unlock]}
 function applyPrefs(){
@@ -241,22 +237,16 @@ for(const C of [SnakeGame,PongGame,BlockGame,MazeGame,BreakerGame,RocksGame,Braw
 }
 
 const gameDefs=[
-  {id:'mountain',title:'Mountain King Practice',desc:'Collect diamonds, find the Flame Spirit, claim the crown and escape to the summit.',accent:'#ffb83d',orientation:'landscape',controls:'action',how:`A practice version built from scratch around the documented 1983 play loop: collect 1,000 diamond points, use music to locate the Flame Spirit, take it to the shrine, claim the crown, then escape to the summit. The soundtrack is a newly synthesised rendition of Grieg’s public-domain “In the Hall of the Mountain King”; no original ROM, code, graphics or recording is included.<br><br><b>Controls:</b> D-pad = run/jump. <kbd>A</kbd> = collect/interact. <kbd>X</kbd> also jumps.`,make:()=>new MountainGame()},
-  {id:'maze',title:'Maze Chase',desc:'Pellets, pursuing ghosts and wrap-around tunnels. Fast, clean and movement-only.',accent:'#ffe24e',orientation:'any',controls:'mirror',how:`Clear every pellet while avoiding the three pursuers. The left D-pad and right-side movement pad both control direction. The open tunnel wraps from one side to the other.`,make:()=>new MazeGame()},
-  {id:'blocks',title:'Block Stack',desc:'A tight falling-block puzzle with line clears, rotation and hard drop.',accent:'#b26ee5',orientation:'any',controls:'action',how:`Build complete horizontal lines. D-pad moves the piece. <kbd>A</kbd>/<kbd>X</kbd> rotates. <kbd>B</kbd> hard-drops. Clear 10 lines to unlock the Sunset console skin.`,make:()=>new BlockGame()},
-  {id:'pong',title:'Table Tennis',desc:'The classic side-to-side paddle duel. First to seven wins.',accent:'#e7e7e7',orientation:'any',controls:'mirror',how:`Move your right paddle up and down. Use either D-pad, or the right-side upper/lower controls. First to 7 wins.`,make:()=>new PongGame()},
-  {id:'snake',title:'Snake',desc:'Wrap the walls, grow the chain, avoid yourself. Either side controls movement.',accent:'#7ef58a',orientation:'any',controls:'mirror',how:`Eat the gold targets and keep growing. The walls wrap you to the opposite side; hitting your own body ends the run. Both control sides work for movement. Reach 10 points to unlock Neon Circuit.`,make:()=>new SnakeGame()},
-  {id:'breaker',title:'Brick Breaker',desc:'Clear the wall, keep the ball alive and chase a clean high score.',accent:'#57c888',orientation:'any',controls:'action',how:`D-pad left/right moves the paddle. <kbd>A</kbd> launches the ball. Clear every brick before losing all three lives.`,make:()=>new BreakerGame()},
-  {id:'rocks',title:'Space Rocks',desc:'Rotate, thrust and shoot through an endless field of splitting rocks.',accent:'#9dc7ff',orientation:'landscape',controls:'action',how:`Landscape game. Left/right rotates, up thrusts, down brakes. <kbd>A</kbd> fires. Large rocks split into smaller ones.`,make:()=>new RocksGame()},
-  {id:'brawl',title:'Street Brawl',desc:'A compact side-scrolling beat-’em-up with punches, kicks and escalating waves.',accent:'#ff716b',orientation:'landscape',controls:'action',how:`Landscape game. D-pad moves. <kbd>A</kbd> punches, <kbd>B</kbd> attacks, <kbd>X</kbd> jumps. Survive escalating waves; clear three to earn the Street Clean-up achievement.`,make:()=>new BrawlGame()}
+  {id:'pong',title:'Table Tennis',desc:'The classic side-to-side paddle duel. First to seven wins.',accent:'#e7e7e7',orientation:'any',controls:'mirror',how:`Move your right paddle up and down. Use either D-pad, or the right-side movement controls. First to 7 wins.`,make:()=>new PongGame()},
+  {id:'snake',title:'Snake',desc:'Wrap the walls, grow the chain, avoid yourself. Either side controls movement.',accent:'#7ef58a',orientation:'any',controls:'mirror',how:`Eat the gold targets and keep growing. The walls wrap you to the opposite side; hitting your own body ends the run. Both control sides work for movement. Reach 10 points to unlock Neon Circuit.`,make:()=>new SnakeGame()}
 ];
 const defs=Object.fromEntries(gameDefs.map(g=>[g.id,g]));
-const gameArt={mountain:'game-mountain.jpg',maze:'game-maze.jpg',blocks:'game-blocks.jpg',pong:'game-pong.jpg',snake:'game-snake.jpg',breaker:'game-breaker.jpg',rocks:'game-rocks.jpg',brawl:'game-brawl.jpg'};
+const gameArt={pong:'game-pong.jpg',snake:'game-snake.jpg'};
 function renderLibrary(){
   const g=$('#gameGrid');g.innerHTML='';
   gameDefs.forEach(d=>{
     const b=document.createElement('button');b.className='gameCard';b.style.setProperty('--accent',d.accent);
-    b.innerHTML=`<div class="gameVisual"><img src="./${gameArt[d.id]||'game-mountain.jpg'}" alt=""></div><div class="gameBody"><h3>${d.title}</h3><p>${d.desc}</p><div class="metaRow"><span class="tag">${d.orientation==='landscape'?'Landscape':'Portrait + Landscape'}</span><span class="tag">${d.controls==='mirror'?'Movement':'Action'}</span>${stats.high[d.id]!=null?`<span class="tag">Best ${stats.high[d.id]}</span>`:''}</div></div>`;
+    b.innerHTML=`<div class="gameVisual"><img src="./${gameArt[d.id]||'game-snake.jpg'}" alt=""></div><div class="gameBody"><h3>${d.title}</h3><p>${d.desc}</p><div class="metaRow"><span class="tag">${d.orientation==='landscape'?'Landscape':'Portrait + Landscape'}</span><span class="tag">${d.controls==='mirror'?'Movement':'Action'}</span>${stats.high[d.id]!=null?`<span class="tag">Best ${stats.high[d.id]}</span>`:''}</div></div>`;
     b.onclick=()=>{audio.click();startGame(d.id)};g.appendChild(b)
   })
 }
@@ -354,9 +344,9 @@ async function refreshRomStatus(){
   $('#runStoredRomBtn').classList.toggle('hidden',!r);$('#removeStoredRomBtn').classList.toggle('hidden',!r)
 }
 async function openOriginalMountain(){audio.click();await refreshRomStatus();$('#originalDialog').showModal()}
-$('#playOriginalMountain').onclick=e=>{e.stopPropagation();openOriginalMountain()};
-$('#originalMountainCard').onclick=e=>{if(e.target.closest('button'))return;openOriginalMountain()};
-$('#originalMountainCard').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openOriginalMountain()}};
+const _playOriginalMountain=$('#playOriginalMountain'),_originalMountainCard=$('#originalMountainCard');
+if(_playOriginalMountain)_playOriginalMountain.onclick=e=>{e.stopPropagation();openOriginalMountain()};
+if(_originalMountainCard){_originalMountainCard.onclick=e=>{if(e.target.closest('button'))return;openOriginalMountain()};_originalMountainCard.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openOriginalMountain()}}}
 $('#mountainRomInput').onchange=async e=>{
   const f=e.target.files?.[0];if(!f)return;
   if(f.size>1024*1024){toast('That file is too large for an Atari 2600 cartridge');return}

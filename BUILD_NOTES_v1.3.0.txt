@@ -1,0 +1,35 @@
+JW RETRO DECK v1.3.0 BUILD NOTES
+================================
+Base: JW_Retro_Deck_v1.2.0_FLAT_PWA.zip
+
+User-facing library:
+- Built-ins retained: Snake, Table Tennis
+- Removed from visible library: Mountain King Practice, Maze Chase, Block Stack, Brick Breaker, Space Rocks, Street Brawl
+- Removed unused artwork files for those imitation games
+
+ROM bank:
+- IndexedDB persistence in jw-retro-roms / roms store
+- Multi-ROM records use key prefix game:
+- SHA-1 + CRC32 fingerprints
+- Internal-title reading for Sega MD/Genesis, GB/GBC, GBA and SNES
+- Filename/extension + header platform detection
+- Metadata edit/delete/re-cover UI
+- Local cover blob persistence
+
+Emulation:
+- EmulatorJS stable data/loader at runtime
+- system-to-core selection
+- custom Retro Deck controller sends keyboard-mapped RetroPad input into isolated emulator iframe
+- centre buttons change to START / SELECT in ROM mode
+- library exit button is always visible above game screen
+
+Source search:
+- in-app source search UI included
+- pluggable adapter contract in rom-source.js
+- no third-party ROM download source bundled/configured
+
+QA performed:
+- JavaScript syntax validated with node --check
+- HTML ID references cross-checked; only optional legacy hidden Mountain King trigger IDs are absent and guarded
+- Service-worker asset list updated to v1.3.0 and includes rom-library.js + rom-source.js
+- Browser automation was attempted in the build environment but local/file navigation is blocked by the environment administrator, so runtime EmulatorJS playback could not be exercised here without a deployed origin and a real ROM.

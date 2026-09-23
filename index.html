@@ -18,7 +18,7 @@
     <button class="iconBtn" id="homeBtn" aria-label="Home">⌂</button>
     <div class="brandLockup">
       <div class="brandMark">JW</div>
-      <div><strong>RETRO DECK</strong><span>JW EDS · HAND-PICKED CLASSICS</span></div>
+      <div><strong>RETRO DECK</strong><span>JW EDS · ROM LIBRARY + QUICK GAMES</span></div>
     </div>
     <div class="topActions">
       <button class="iconBtn" id="soundBtn" aria-label="Sound">♪</button>
@@ -34,32 +34,44 @@
       <div class="heroCopy">
         <p class="eyebrow">JW RETRO DECK</p>
         <h1>Games never get old.</h1>
-        <p>A small collection of games worth replaying — built around a proper handheld console, not a wall of filler.</p>
+        <p>Your own retro game shelf. Import a ROM once, Retro Deck detects the platform, stores it on this device, finds matching cover art, and launches the correct emulator.</p>
       </div>
     </section>
 
-    <section class="featuredCard" id="originalMountainCard" role="button" tabindex="0">
-      <img src="./game-mountain.jpg" alt="">
-      <div class="featuredGlow"></div>
-      <div class="featuredBody">
-        <span class="ribbon">FEATURED · ORIGINAL CARTRIDGE MODE</span>
-        <h2>Mountain King</h2>
-        <p>Run your own Atari 2600 cartridge image through hardware emulation for the original game, original graphics, original music and original sound effects.</p>
-        <div class="metaRow"><span class="tag">ATARI 2600</span><span class="tag">LANDSCAPE</span><span class="tag">ORIGINAL ROM MODE</span></div>
+    <section class="romHub" aria-label="ROM library controls">
+      <div class="romHubCopy">
+        <span class="ribbon">ROM READER · MULTI-SYSTEM</span>
+        <h2>Build your own cartridge shelf.</h2>
+        <p>Import ROM files you already have. Retro Deck stores them in its local game bank, identifies the system, remembers the game, and attempts to match the original box cover automatically.</p>
+        <div class="romActions">
+          <button class="playNow inlineAction" id="importRomBtn" type="button">＋ IMPORT ROM</button>
+          <button class="sourceBtn" id="sourceSearchBtn" type="button">⌕ SEARCH SOURCE</button>
+        </div>
+        <input id="romFileInput" type="file" multiple hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,application/octet-stream">
       </div>
-      <button class="playNow" id="playOriginalMountain">PLAY ORIGINAL</button>
+      <div class="romHubStatus">
+        <span id="romCount" class="romCount">0 ROMS</span>
+        <span id="storageStatus" class="smallMuted">Checking local storage…</span>
+      </div>
     </section>
 
     <div class="sectionTitle">
-      <div><span class="eyebrow">CURATED LIBRARY</span><h2>Pick a cartridge</h2></div>
-      <span class="smallMuted">No 500-in-1 filler.</span>
+      <div><span class="eyebrow">YOUR COLLECTION</span><h2>ROM library</h2></div>
+      <input id="librarySearch" class="librarySearch" type="search" inputmode="search" placeholder="Search your games">
+    </div>
+    <section id="romGrid" class="gameGrid romGrid" aria-label="ROM collection"></section>
+    <div id="romEmpty" class="romEmpty">
+      <strong>No ROMs saved yet.</strong>
+      <span>Tap <b>Import ROM</b> and choose a game file you already own.</span>
+    </div>
+
+    <div class="sectionTitle">
+      <div><span class="eyebrow">BUILT-IN QUICK GAMES</span><h2>Snake & Table Tennis</h2></div>
+      <span class="smallMuted">Everything else comes from your ROM library.</span>
     </div>
     <section id="gameGrid" class="gameGrid" aria-label="Game library"></section>
 
-    <button class="requestTile" id="requestGameBtn">
-      <span>＋</span><strong>Request another classic</strong>
-      <small>Save a title for research. Original-ROM modes can be added where a suitable emulator exists.</small>
-    </button>
+    <button class="requestTile hidden" id="requestGameBtn" type="button" aria-hidden="true"></button>
   </main>
 
   <main id="consoleView" class="view consoleView">
@@ -88,10 +100,11 @@
       </div>
 
       <section class="screenBezel">
-        <div class="screenTopline"><span id="gameTitle">GAME</span><span id="hudText"></span></div>
+        <div class="screenTopline"><span id="gameTitle">GAME</span><span id="hudText"></span><button id="romExitBtn" class="romExitBtn hidden" type="button">LIBRARY</button></div>
         <div class="screenStage">
           <canvas id="gameCanvas" width="960" height="540" aria-label="Game screen"></canvas>
           <div id="javatari-screen" class="javatariHost hidden" aria-label="Original Atari 2600 game screen"></div>
+          <div id="romEmulatorHost" class="romEmulatorHost hidden" aria-label="ROM emulator"></div>
           <div class="crtGlass"></div>
         </div>
         <div id="toast" class="toast hidden"></div>
@@ -131,10 +144,10 @@
     </form>
   </dialog>
 
-  <dialog id="originalDialog" class="panelDialog largeDialog">
+  <dialog id="originalDialog" class="panelDialog largeDialog hidden">
     <form method="dialog" class="dialogCard">
       <div class="dialogHeader"><div><span class="eyebrow">ORIGINAL CARTRIDGE MODE</span><h2>Mountain King · Atari 2600</h2></div><button value="cancel" class="closeBtn">×</button></div>
-      <img class="dialogHero" src="./game-mountain.jpg" alt="">
+      <img class="dialogHero" src="./hero-retro.png" alt="">
       <p class="originalLead">For the exact 1983 game, this mode emulates the Atari 2600 cartridge itself. That means the original game code generates the original graphics, music and sound effects.</p>
       <div id="romStatus" class="romStatus">No Mountain King cartridge image saved on this device yet.</div>
       <label class="romPicker">Choose your Mountain King cartridge image
@@ -143,6 +156,35 @@
       <button type="button" id="runStoredRomBtn" class="wideBtn primary hidden">Play saved original cartridge</button>
       <button type="button" id="removeStoredRomBtn" class="wideBtn hidden">Forget saved cartridge</button>
       <p class="smallNote">The ROM itself is not bundled with Retro Deck. If you load your own cartridge image, it is stored only in this browser on this device. Emulator engine: Javatari 5.0.4.</p>
+    </form>
+  </dialog>
+
+  <dialog id="romDetailsDialog" class="panelDialog largeDialog">
+    <form method="dialog" class="dialogCard">
+      <div class="dialogHeader"><div><span class="eyebrow">ROM DETAILS</span><h2 id="romDetailsHeading">Game</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <div class="romDetailsLayout">
+        <div class="romCoverPreview"><img id="romDetailsCover" alt="Game cover"><div id="romCoverFallback" class="coverFallback">NO COVER</div></div>
+        <div class="romDetailsFields">
+          <label class="field">Game title<input id="romTitleInput"></label>
+          <label class="field">Platform<select id="romPlatformInput"></select></label>
+          <div id="romHashLine" class="romHashLine"></div>
+          <button type="button" id="refreshCoverBtn" class="wideBtn">Find original cover again</button>
+          <button type="button" id="playRomBtn" class="wideBtn primary">Play game</button>
+          <button type="button" id="saveRomMetaBtn" class="wideBtn">Save details</button>
+          <button type="button" id="deleteRomBtn" class="wideBtn danger">Remove from Retro Deck</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="sourceDialog" class="panelDialog largeDialog">
+    <form method="dialog" class="dialogCard" id="sourceSearchForm">
+      <div class="dialogHeader"><div><span class="eyebrow">ROM SOURCE</span><h2>Search game source</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <p id="sourceStatus" class="smallNote">No ROM source is connected yet.</p>
+      <label class="field">Search games<input id="sourceQuery" type="search" placeholder="e.g. Streets of Rage"></label>
+      <button type="submit" id="sourceSearchSubmit" class="wideBtn primary">Search inside Retro Deck</button>
+      <div id="sourceResults" class="sourceResults"></div>
+      <p class="smallNote">When a compatible source is connected, results are shown here and can be installed directly into your Retro Deck library without opening another website.</p>
     </form>
   </dialog>
 
@@ -183,5 +225,7 @@
   </dialog>
 </div>
 <script src="./app.js"></script>
+<script src="./rom-source.js"></script>
+<script src="./rom-library.js"></script>
 </body>
 </html>
