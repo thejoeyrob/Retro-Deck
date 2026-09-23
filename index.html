@@ -1,138 +1,187 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <meta name="theme-color" content="#202226" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Retro Deck" />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="./icon-192.png" />
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#171318">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Retro Deck">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
   <title>JW Retro Deck</title>
 </head>
 <body>
-  <div id="app" class="app skin-classic">
-    <header class="topbar">
-      <button class="iconBtn" id="homeBtn" aria-label="Home">⌂</button>
-      <div class="brandLockup">
-        <div class="brandMark">JW</div>
-        <div><strong>RETRO DECK</strong><span>by JW Eds</span></div>
-      </div>
-      <div class="topActions">
-        <button class="iconBtn" id="achievementsBtn" aria-label="Achievements">★</button>
-        <button class="iconBtn" id="settingsBtn" aria-label="Settings">⚙</button>
-      </div>
-    </header>
+<div id="app" class="app skin-classic">
+  <header class="topbar">
+    <button class="iconBtn" id="homeBtn" aria-label="Home">⌂</button>
+    <div class="brandLockup">
+      <div class="brandMark">JW</div>
+      <div><strong>RETRO DECK</strong><span>JW EDS · HAND-PICKED CLASSICS</span></div>
+    </div>
+    <div class="topActions">
+      <button class="iconBtn" id="soundBtn" aria-label="Sound">♪</button>
+      <button class="iconBtn" id="achievementsBtn" aria-label="Achievements">★</button>
+      <button class="iconBtn" id="settingsBtn" aria-label="Settings">⚙</button>
+    </div>
+  </header>
 
-    <main id="libraryView" class="view libraryView active">
-      <section class="hero">
-        <p class="eyebrow">HAND-PICKED • NO FILLER</p>
-        <h1>Pick a game.</h1>
-        <p>One adaptable retro console. Controls change only when the game needs them.</p>
-      </section>
-      <section id="gameGrid" class="gameGrid" aria-label="Game library"></section>
-      <button class="requestTile" id="requestGameBtn"><span>＋</span><strong>Request another game</strong><small>Queue a title for future research or an original tribute build.</small></button>
-    </main>
+  <main id="libraryView" class="view libraryView active">
+    <section class="heroVisual">
+      <img src="./hero-retro.png" alt="">
+      <div class="heroShade"></div>
+      <div class="heroCopy">
+        <p class="eyebrow">JW RETRO DECK</p>
+        <h1>Games never get old.</h1>
+        <p>A small collection of games worth replaying — built around a proper handheld console, not a wall of filler.</p>
+      </div>
+    </section>
 
-    <main id="consoleView" class="view consoleView">
-      <div id="rotatePrompt" class="rotatePrompt hidden">
-        <div class="rotatePhone">▭↻</div>
-        <h2>Turn your device sideways</h2>
-        <p>This game uses movement and action buttons together.</p>
+    <section class="featuredCard" id="originalMountainCard" role="button" tabindex="0">
+      <img src="./game-mountain.jpg" alt="">
+      <div class="featuredGlow"></div>
+      <div class="featuredBody">
+        <span class="ribbon">FEATURED · ORIGINAL CARTRIDGE MODE</span>
+        <h2>Mountain King</h2>
+        <p>Run your own Atari 2600 cartridge image through hardware emulation for the original game, original graphics, original music and original sound effects.</p>
+        <div class="metaRow"><span class="tag">ATARI 2600</span><span class="tag">LANDSCAPE</span><span class="tag">ORIGINAL ROM MODE</span></div>
+      </div>
+      <button class="playNow" id="playOriginalMountain">PLAY ORIGINAL</button>
+    </section>
+
+    <div class="sectionTitle">
+      <div><span class="eyebrow">CURATED LIBRARY</span><h2>Pick a cartridge</h2></div>
+      <span class="smallMuted">No 500-in-1 filler.</span>
+    </div>
+    <section id="gameGrid" class="gameGrid" aria-label="Game library"></section>
+
+    <button class="requestTile" id="requestGameBtn">
+      <span>＋</span><strong>Request another classic</strong>
+      <small>Save a title for research. Original-ROM modes can be added where a suitable emulator exists.</small>
+    </button>
+  </main>
+
+  <main id="consoleView" class="view consoleView">
+    <div id="rotatePrompt" class="rotatePrompt hidden">
+      <div class="rotatePhone">▭↻</div>
+      <h2>Turn your device sideways</h2>
+      <p>This game uses movement and action controls together.</p>
+    </div>
+
+    <div id="consoleShell" class="consoleShell">
+      <div class="consoleChrome">
+        <div class="etched">JW EDS</div>
+        <div class="cartridgeMark"><span></span>RETRO DECK</div>
+        <button id="menuBtn" class="systemBtn">MENU</button>
+        <button id="pauseBtn" class="systemBtn">PAUSE</button>
       </div>
 
-      <div id="consoleShell" class="consoleShell">
-        <div class="consoleChrome">
-          <div class="etched">JW EDS</div>
-          <button id="menuBtn" class="systemBtn">MENU</button>
-          <button id="pauseBtn" class="systemBtn">PAUSE</button>
+      <div class="controlZone leftZone">
+        <div id="dpad" class="dpad" aria-label="Directional pad">
+          <button data-key="up" class="dpadBtn up" aria-label="Up">▲</button>
+          <button data-key="left" class="dpadBtn left" aria-label="Left">◀</button>
+          <div class="dpadCenter"></div>
+          <button data-key="right" class="dpadBtn right" aria-label="Right">▶</button>
+          <button data-key="down" class="dpadBtn down" aria-label="Down">▼</button>
         </div>
+      </div>
 
-        <div class="controlZone leftZone">
-          <div id="dpad" class="dpad" aria-label="Directional pad">
-            <button data-key="up" class="dpadBtn up">▲</button>
-            <button data-key="left" class="dpadBtn left">◀</button>
-            <div class="dpadCenter"></div>
-            <button data-key="right" class="dpadBtn right">▶</button>
-            <button data-key="down" class="dpadBtn down">▼</button>
-          </div>
-        </div>
-
-        <section class="screenBezel">
-          <div class="screenTopline"><span id="gameTitle">GAME</span><span id="hudText"></span></div>
+      <section class="screenBezel">
+        <div class="screenTopline"><span id="gameTitle">GAME</span><span id="hudText"></span></div>
+        <div class="screenStage">
           <canvas id="gameCanvas" width="960" height="540" aria-label="Game screen"></canvas>
-          <div id="toast" class="toast hidden"></div>
-        </section>
+          <div id="javatari-screen" class="javatariHost hidden" aria-label="Original Atari 2600 game screen"></div>
+          <div class="crtGlass"></div>
+        </div>
+        <div id="toast" class="toast hidden"></div>
+      </section>
 
-        <div class="controlZone rightZone">
-          <div id="actionPad" class="actionPad" aria-label="Action buttons">
-            <button data-key="x" class="actionBtn btnX">X</button>
-            <button data-key="y" class="actionBtn btnY">Y</button>
-            <button data-key="a" class="actionBtn btnA">A</button>
-            <button data-key="b" class="actionBtn btnB">B</button>
-          </div>
-          <div id="mirrorPad" class="mirrorPad hidden" aria-label="Alternate movement controls">
-            <button data-key="up" class="mirrorBtn up">▲</button>
-            <button data-key="left" class="mirrorBtn left">◀</button>
-            <button data-key="right" class="mirrorBtn right">▶</button>
-            <button data-key="down" class="mirrorBtn down">▼</button>
-          </div>
+      <div class="controlZone rightZone">
+        <div id="actionPad" class="actionPad actionCross" aria-label="Action buttons">
+          <button data-key="x" class="actionBtn btnX">X</button>
+          <button data-key="y" class="actionBtn btnY">Y</button>
+          <button data-key="a" class="actionBtn btnA">A</button>
+          <button data-key="b" class="actionBtn btnB">B</button>
+        </div>
+        <div id="mirrorPad" class="mirrorPad hidden" aria-label="Alternate movement controls">
+          <button data-key="up" class="mirrorBtn up">▲</button>
+          <button data-key="left" class="mirrorBtn left">◀</button>
+          <button data-key="right" class="mirrorBtn right">▶</button>
+          <button data-key="down" class="mirrorBtn down">▼</button>
         </div>
       </div>
-    </main>
+    </div>
+  </main>
 
-    <dialog id="menuDialog" class="panelDialog">
-      <form method="dialog" class="dialogCard">
-        <div class="dialogHeader"><div><span class="eyebrow">SYSTEM</span><h2 id="menuGameName">Game menu</h2></div><button value="cancel" class="closeBtn">×</button></div>
-        <button type="button" id="resumeBtn" class="wideBtn primary">Resume</button>
-        <button type="button" id="restartBtn" class="wideBtn">Restart game</button>
-        <button type="button" id="howToBtn" class="wideBtn">Controls & how to play</button>
-        <button type="button" id="exitGameBtn" class="wideBtn danger">Exit to library</button>
-      </form>
-    </dialog>
+  <dialog id="menuDialog" class="panelDialog">
+    <form method="dialog" class="dialogCard">
+      <div class="dialogHeader"><div><span class="eyebrow">SYSTEM</span><h2 id="menuGameName">Game menu</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <button type="button" id="resumeBtn" class="wideBtn primary">Resume</button>
+      <button type="button" id="restartBtn" class="wideBtn">Restart game</button>
+      <button type="button" id="howToBtn" class="wideBtn">Controls & how to play</button>
+      <button type="button" id="exitGameBtn" class="wideBtn danger">Exit to library</button>
+    </form>
+  </dialog>
 
-    <dialog id="infoDialog" class="panelDialog">
-      <form method="dialog" class="dialogCard"><div class="dialogHeader"><div><span class="eyebrow">HOW TO PLAY</span><h2 id="infoTitle"></h2></div><button value="cancel" class="closeBtn">×</button></div><div id="infoBody" class="infoBody"></div></form>
-    </dialog>
+  <dialog id="infoDialog" class="panelDialog">
+    <form method="dialog" class="dialogCard">
+      <div class="dialogHeader"><div><span class="eyebrow">HOW TO PLAY</span><h2 id="infoTitle"></h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <div id="infoBody" class="infoBody"></div>
+    </form>
+  </dialog>
 
-    <dialog id="settingsDialog" class="panelDialog largeDialog">
-      <form method="dialog" class="dialogCard">
-        <div class="dialogHeader"><div><span class="eyebrow">CUSTOMISE</span><h2>Appearance & controls</h2></div><button value="cancel" class="closeBtn">×</button></div>
-        <section><h3>Console skins</h3><div id="skinGrid" class="skinGrid"></div></section>
-        <section class="settingSection"><h3>Button colours</h3><div class="colourGrid">
-          <label>D-pad <input id="dpadColour" type="color" value="#202226"></label>
-          <label>A <input id="aColour" type="color" value="#e84b4b"></label>
-          <label>B <input id="bColour" type="color" value="#f2cc40"></label>
-          <label>X <input id="xColour" type="color" value="#4c83f1"></label>
-          <label>Y <input id="yColour" type="color" value="#4bc27b"></label>
-        </div></section>
-        <section class="settingSection"><h3>Play preferences</h3>
-          <label class="switchRow"><span>Haptics where supported</span><input id="hapticsToggle" type="checkbox" checked></label>
-          <label class="switchRow"><span>Game sound</span><input id="soundToggle" type="checkbox" checked></label>
-        </section>
-        <button id="resetAppearanceBtn" type="button" class="wideBtn">Reset appearance</button>
-      </form>
-    </dialog>
+  <dialog id="originalDialog" class="panelDialog largeDialog">
+    <form method="dialog" class="dialogCard">
+      <div class="dialogHeader"><div><span class="eyebrow">ORIGINAL CARTRIDGE MODE</span><h2>Mountain King · Atari 2600</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <img class="dialogHero" src="./game-mountain.jpg" alt="">
+      <p class="originalLead">For the exact 1983 game, this mode emulates the Atari 2600 cartridge itself. That means the original game code generates the original graphics, music and sound effects.</p>
+      <div id="romStatus" class="romStatus">No Mountain King cartridge image saved on this device yet.</div>
+      <label class="romPicker">Choose your Mountain King cartridge image
+        <input id="mountainRomInput" type="file" accept=".bin,.a26,.rom,application/octet-stream">
+      </label>
+      <button type="button" id="runStoredRomBtn" class="wideBtn primary hidden">Play saved original cartridge</button>
+      <button type="button" id="removeStoredRomBtn" class="wideBtn hidden">Forget saved cartridge</button>
+      <p class="smallNote">The ROM itself is not bundled with Retro Deck. If you load your own cartridge image, it is stored only in this browser on this device. Emulator engine: Javatari 5.0.4.</p>
+    </form>
+  </dialog>
 
-    <dialog id="achievementsDialog" class="panelDialog largeDialog">
-      <form method="dialog" class="dialogCard"><div class="dialogHeader"><div><span class="eyebrow">PROGRESS</span><h2>Achievements & unlocks</h2></div><button value="cancel" class="closeBtn">×</button></div><div id="achievementList" class="achievementList"></div></form>
-    </dialog>
+  <dialog id="settingsDialog" class="panelDialog largeDialog">
+    <form method="dialog" class="dialogCard">
+      <div class="dialogHeader"><div><span class="eyebrow">CUSTOMISE</span><h2>Console workshop</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <section><h3>Rendered console skins</h3><p class="smallNote">Some patterns unlock through play. Tap a skin preview to fit it to the console.</p><div id="skinGrid" class="skinGrid"></div></section>
+      <section class="settingSection"><h3>Button colours</h3><div class="colourGrid">
+        <label>D-pad <input id="dpadColour" type="color" value="#202226"></label>
+        <label>A <input id="aColour" type="color" value="#e84b4b"></label>
+        <label>B <input id="bColour" type="color" value="#f2cc40"></label>
+        <label>X <input id="xColour" type="color" value="#4c83f1"></label>
+        <label>Y <input id="yColour" type="color" value="#4bc27b"></label>
+      </div></section>
+      <section class="settingSection"><h3>Play preferences</h3>
+        <label class="switchRow"><span>Haptics where supported</span><input id="hapticsToggle" type="checkbox" checked></label>
+        <label class="switchRow"><span>Game sound</span><input id="soundToggle" type="checkbox" checked></label>
+        <button id="soundTestBtn" type="button" class="wideBtn">Test sound</button>
+      </section>
+      <button id="resetAppearanceBtn" type="button" class="wideBtn">Reset appearance</button>
+    </form>
+  </dialog>
 
-    <dialog id="requestDialog" class="panelDialog">
-      <form method="dialog" class="dialogCard" id="requestForm">
-        <div class="dialogHeader"><div><span class="eyebrow">GAME REQUEST</span><h2>Add to the research queue</h2></div><button value="cancel" class="closeBtn">×</button></div>
-        <label class="field">Game title<input id="requestTitle" required placeholder="e.g. Alex Kidd in Miracle World"></label>
-        <label class="field">Original platform<input id="requestPlatform" placeholder="e.g. Master System"></label>
-        <label class="field">What matters most<textarea id="requestNotes" rows="3" placeholder="Exact feel, a particular level, soundtrack, controls..."></textarea></label>
-        <p class="smallNote">This PWA stores requests locally. A future backend can perform automated research; the browser alone cannot reliably run background web searches on iPhone.</p>
-        <button type="submit" class="wideBtn primary">Save request</button>
-        <button type="button" id="copyResearchBtn" class="wideBtn">Copy research prompt</button>
-        <div id="requestList" class="requestList"></div>
-      </form>
-    </dialog>
-  </div>
+  <dialog id="achievementsDialog" class="panelDialog largeDialog">
+    <form method="dialog" class="dialogCard"><div class="dialogHeader"><div><span class="eyebrow">PROGRESS</span><h2>Achievements & unlocks</h2></div><button value="cancel" class="closeBtn">×</button></div><div id="achievementList" class="achievementList"></div></form>
+  </dialog>
+
+  <dialog id="requestDialog" class="panelDialog">
+    <form method="dialog" class="dialogCard" id="requestForm">
+      <div class="dialogHeader"><div><span class="eyebrow">GAME REQUEST</span><h2>Add a classic to research</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <label class="field">Game title<input id="requestTitle" required placeholder="e.g. Altered Beast"></label>
+      <label class="field">Original platform<input id="requestPlatform" placeholder="e.g. Mega Drive"></label>
+      <label class="field">What matters most<textarea id="requestNotes" rows="3" placeholder="Exact gameplay, music, a particular level..."></textarea></label>
+      <button type="submit" class="wideBtn primary">Save request</button>
+      <button type="button" id="copyResearchBtn" class="wideBtn">Copy research prompt</button>
+      <div id="requestList" class="requestList"></div>
+    </form>
+  </dialog>
+</div>
 <script src="./app.js"></script>
 </body>
 </html>

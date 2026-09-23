@@ -1,28 +1,26 @@
-# JW Retro Deck
+# JW Retro Deck v1.2.0
 
-A dependency-free, GitHub Pages-ready PWA containing a compact library of original retro-style games.
+Root-flat GitHub Pages PWA.
 
-## Included games
-- Mountain King Tribute — original implementation inspired by the documented 1983 gameplay loop; original code/art; newly synthesised public-domain Grieg theme.
-- Maze Chase — maze/pellet chase with wrap tunnels.
-- Block Stack — falling-block puzzle.
-- Table Tennis — paddle game vs CPU.
-- Snake — wrap-around snake.
-- Brick Breaker — paddle/brick game.
-- Space Rocks — rotate/thrust/shoot arcade game.
-- Street Brawl — compact side-scrolling action game.
+## Included
+- New nostalgic 80s console/library visual system using rendered artwork.
+- Generated JW Retro Deck icon as the PWA icon.
+- Four action buttons arranged in a true cross: X top, Y left, A right, B bottom.
+- Touch highlighting/callouts/text-selection removed from game controls.
+- Fixed viewport during play; rotation is the only layout change.
+- Improved WebAudio unlock for iPhone/iPad plus Sound Test.
+- Eight rendered skin previews with achievement unlocks.
+- Rendered game-card artwork.
+- Curated built-in games retained and visually treated with CRT/pixel presentation.
+- Mountain King Original Cartridge Mode.
 
-No ROMs, copyrighted graphics, sound recordings, or extracted code are included.
+## Mountain King Original Cartridge Mode
+No copyrighted Mountain King ROM is included. Load a cartridge image you lawfully possess (`.bin`, `.a26` or `.rom`). The PWA stores it locally in IndexedDB and runs it through Javatari 5.0.4, so the cartridge itself supplies the original code, graphics, music and sound effects.
 
-## GitHub Pages
-1. Create a new repository.
-2. Upload the *contents* of this folder to the repository root.
-3. Settings → Pages → Deploy from branch → `main` → `/ (root)` → Save.
-4. Open the Pages URL. On iPhone/iPad use Safari → Share → Add to Home Screen.
+The emulator script is fetched from a pinned public GitHub revision via jsDelivr on first use and can then be cached by the PWA.
 
-The PWA uses only relative paths, so it works from a GitHub project sub-path.
-
-## Controls
-Desktop: Arrow keys/WASD for movement, Z=A, X=B, A=X, S=Y, P=Pause, Escape=Menu.
-
-Touch: large adaptive D-pad/action controls. Landscape-only games display a rotate prompt in portrait.
+## Desktop controls
+Arrow keys / WASD = movement
+Z / X / Q / E = action buttons
+P = pause
+Escape = menu

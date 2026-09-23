@@ -19,16 +19,36 @@ function buzz(ms=12){if(prefs.haptics&&navigator.vibrate)navigator.vibrate(ms)}
 
 const input={down:{},pressed:{},released:{}, set(k,v){if(v&&!this.down[k])this.pressed[k]=true;if(!v&&this.down[k])this.released[k]=true;this.down[k]=v}, consume(k){const v=!!this.pressed[k];delete this.pressed[k];return v}, frame(){this.pressed={};this.released={}}};
 const keyMap={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',KeyZ:'a',KeyX:'b',KeyQ:'x',KeyE:'y'};
-addEventListener('keydown',e=>{if(e.code==='KeyP'){togglePause();e.preventDefault();return}if(e.code==='Escape'&&currentGame){openMenu();e.preventDefault();return}const k=keyMap[e.code];if(k){input.set(k,true);e.preventDefault()}});
-addEventListener('keyup',e=>{const k=keyMap[e.code];if(k){input.set(k,false);e.preventDefault()}});
+let originalMode=false, originalRomBytes=null, javatariReady=false, javatariLoading=null;
+
+function originalKeyCode(k){return ({up:38,down:40,left:37,right:39,a:32,b:32,x:32,y:32})[k]}
+function routeControl(k,v){
+  if(originalMode&&javatariReady&&window.Javatari?.room?.consoleControls){
+    const code=originalKeyCode(k); if(code) Javatari.room.consoleControls.processKey(code,v);
+    return;
+  }
+  input.set(k,v);
+}
+addEventListener('keydown',e=>{
+  audio.unlock();
+  if(e.code==='KeyP'){togglePause();e.preventDefault();return}
+  if(e.code==='Escape'&&(currentGame||originalMode)){openMenu();e.preventDefault();return}
+  const k=keyMap[e.code];if(k){routeControl(k,true);e.preventDefault()}
+});
+addEventListener('keyup',e=>{const k=keyMap[e.code];if(k){routeControl(k,false);e.preventDefault()}});
 document.querySelectorAll('[data-key]').forEach(btn=>{
   const k=btn.dataset.key;
-  const on=e=>{e.preventDefault();btn.setPointerCapture?.(e.pointerId);input.set(k,true);btn.classList.add('pressed');buzz(8)};
-  const off=e=>{e.preventDefault();input.set(k,false);btn.classList.remove('pressed')};
-  btn.addEventListener('pointerdown',on);['pointerup','pointercancel','lostpointercapture'].forEach(ev=>btn.addEventListener(ev,off));
+  const on=e=>{e.preventDefault();e.stopPropagation();audio.unlock();btn.setPointerCapture?.(e.pointerId);routeControl(k,true);btn.classList.add('pressed');buzz(8)};
+  const off=e=>{e.preventDefault();e.stopPropagation();routeControl(k,false);btn.classList.remove('pressed')};
+  btn.addEventListener('pointerdown',on,{passive:false});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>btn.addEventListener(ev,off,{passive:false}));
 });
-document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('pointerdown',()=>audio.unlock(),{capture:true,passive:true});
+document.addEventListener('touchstart',()=>audio.unlock(),{capture:true,passive:true});
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
+document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 
 const achievements={
   snake10:{title:'Snake Charmer',desc:'Reach 10 points in Snake.',reward:'Unlocks Neon Circuit skin'},
@@ -56,15 +76,58 @@ function skinUnlocked(s){return !s.unlock||!!stats.achievements[s.unlock]}
 function applyPrefs(){
   $('#app').className=`app skin-${prefs.skin}`;
   const r=document.documentElement.style;r.setProperty('--dpad',prefs.buttons.dpad);r.setProperty('--a',prefs.buttons.a);r.setProperty('--b',prefs.buttons.b);r.setProperty('--x',prefs.buttons.x);r.setProperty('--y',prefs.buttons.y);
-  $('#dpadColour').value=prefs.buttons.dpad;$('#aColour').value=prefs.buttons.a;$('#bColour').value=prefs.buttons.b;$('#xColour').value=prefs.buttons.x;$('#yColour').value=prefs.buttons.y;$('#hapticsToggle').checked=prefs.haptics;$('#soundToggle').checked=prefs.sound;
+  $('#dpadColour').value=prefs.buttons.dpad;$('#aColour').value=prefs.buttons.a;$('#bColour').value=prefs.buttons.b;$('#xColour').value=prefs.buttons.x;$('#yColour').value=prefs.buttons.y;$('#hapticsToggle').checked=prefs.haptics;$('#soundToggle').checked=prefs.sound;$('#soundBtn').textContent=prefs.sound?'♪':'×';
 }
-function renderSkins(){const el=$('#skinGrid');el.innerHTML='';skins.forEach(s=>{const b=document.createElement('button');b.type='button';b.className=`skinChoice ${prefs.skin===s.id?'selected':''} ${skinUnlocked(s)?'':'locked'}`;b.innerHTML=`<i class="skinSwatch" style="background:${s.swatch}"></i><span>${s.name}</span><small>${skinUnlocked(s)?(s.unlock?'Unlocked':'Included'):`🔒 ${achievements[s.unlock].desc}`}</small>`;b.onclick=()=>{if(!skinUnlocked(s)){toast(achievements[s.unlock].desc);return}prefs.skin=s.id;saveAll();applyPrefs();renderSkins()};el.appendChild(b)})}
+function renderSkins(){const el=$('#skinGrid');el.innerHTML='';skins.forEach(s=>{const b=document.createElement('button');b.type='button';b.className=`skinChoice ${prefs.skin===s.id?'selected':''} ${skinUnlocked(s)?'':'locked'}`;b.innerHTML=`<img src="./skin-${s.id}.jpg" alt=""><span>${s.name}</span><small>${skinUnlocked(s)?(s.unlock?'Unlocked':'Included'):`🔒 ${achievements[s.unlock].desc}`}</small>`;b.onclick=()=>{audio.click();if(!skinUnlocked(s)){toast(achievements[s.unlock].desc);return}prefs.skin=s.id;saveAll();applyPrefs();renderSkins()};el.appendChild(b)})}
 function renderAchievements(){const el=$('#achievementList');el.innerHTML='';Object.entries(achievements).forEach(([id,a])=>{const ok=!!stats.achievements[id];const d=document.createElement('div');d.className=`achievement ${ok?'':'locked'}`;d.innerHTML=`<div class="medal">${ok?'★':'○'}</div><div><strong>${a.title}</strong><small>${a.desc}<br>${a.reward}</small></div>`;el.appendChild(d)})}
 ['dpad','a','b','x','y'].forEach(k=>{$(`#${k}Colour`).addEventListener('input',e=>{prefs.buttons[k]=e.target.value;saveAll();applyPrefs()})});
-$('#hapticsToggle').onchange=e=>{prefs.haptics=e.target.checked;saveAll()};$('#soundToggle').onchange=e=>{prefs.sound=e.target.checked;saveAll();if(!prefs.sound)audio.stop()};
+$('#hapticsToggle').onchange=e=>{prefs.haptics=e.target.checked;saveAll()};$('#soundToggle').onchange=e=>{prefs.sound=e.target.checked;saveAll();if(!prefs.sound)audio.stop();else audio.test()};
 $('#resetAppearanceBtn').onclick=()=>{prefs={skin:'classic',haptics:true,sound:true,buttons:{dpad:'#202226',a:'#e84b4b',b:'#f2cc40',x:'#4c83f1',y:'#4bc27b'}};saveAll();applyPrefs();renderSkins()};
 
-const audio={ctx:null,nodes:[],timer:null,ensure(){if(!prefs.sound)return null;this.ctx??=new (window.AudioContext||window.webkitAudioContext)();this.ctx.resume?.();return this.ctx},beep(freq=440,d=.06,type='square',gain=.03){const a=this.ensure();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=freq;g.gain.value=gain;o.connect(g).connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.stop(a.currentTime+d+.02)},stop(){clearTimeout(this.timer);this.timer=null;this.nodes.forEach(n=>{try{n.stop()}catch{}});this.nodes=[]},mountain(proximity=1,speed=1){if(!prefs.sound)return;this.mountainLevel=clamp(proximity,0,1);this.mountainSpeed=Math.max(.7,speed);if(this.timer)return;const a=this.ensure();if(!a)return;const notes=[440,493.88,523.25,587.33,659.25,523.25,659.25,622.25,493.88,622.25,659.25,523.25,659.25,698.46,587.33,698.46,739.99,622.25,739.99,783.99,659.25,783.99,830.61,698.46];let i=0;const play=()=>{if(!currentGame||currentGame.id!=='mountain'||currentGame.paused){this.timer=null;return}const o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=notes[i++%notes.length];const vol=.008+.06*(this.mountainLevel??1);g.gain.setValueAtTime(vol,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.1);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+.11);this.timer=setTimeout(play,Math.max(58,175/(this.mountainSpeed||1)))};play()}}
+const audio={
+  ctx:null,master:null,nodes:[],timer:null,unlocked:false,
+  unlock(){
+    if(!prefs.sound)return;
+    try{
+      this.ctx??=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+      if(!this.master){this.master=this.ctx.createGain();this.master.gain.value=.9;this.master.connect(this.ctx.destination)}
+      this.ctx.resume?.();this.unlocked=true;
+    }catch(e){}
+  },
+  ensure(){if(!prefs.sound)return null;this.unlock();return this.ctx},
+  beep(freq=440,d=.06,type='square',gain=.035){
+    const a=this.ensure();if(!a||!this.master)return;
+    const o=a.createOscillator(),g=a.createGain();
+    o.type=type;o.frequency.setValueAtTime(freq,a.currentTime);
+    g.gain.setValueAtTime(.0001,a.currentTime);g.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),a.currentTime+.008);
+    g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);
+    o.connect(g).connect(this.master);o.start();o.stop(a.currentTime+d+.02);this.nodes.push(o);
+  },
+  click(){this.beep(190,.025,'square',.02);setTimeout(()=>this.beep(265,.025,'square',.016),24)},
+  test(){this.unlock();this.beep(220,.08,'square',.05);setTimeout(()=>this.beep(330,.08,'square',.045),90);setTimeout(()=>this.beep(440,.12,'square',.04),180)},
+  stop(){clearTimeout(this.timer);this.timer=null;this.nodes.splice(0).forEach(n=>{try{n.stop()}catch{}})},
+  mountain(proximity=1,speed=1){
+    if(!prefs.sound)return;this.mountainLevel=clamp(proximity,0,1);this.mountainSpeed=Math.max(.7,speed);if(this.timer)return;
+    const a=this.ensure();if(!a||!this.master)return;
+    const notes=[196,220,233.08,261.63,293.66,233.08,293.66,277.18,220,277.18,293.66,233.08,293.66,311.13,261.63,311.13,329.63,277.18,329.63,349.23,293.66,349.23,369.99,311.13];
+    let i=0;
+    const play=()=>{
+      if(!currentGame||currentGame.id!=='mountain'||currentGame.paused){this.timer=null;return}
+      const o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=notes[i++%notes.length];
+      const vol=.006+.05*(this.mountainLevel??1);g.gain.setValueAtTime(vol,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.095);
+      o.connect(g).connect(this.master);o.start();o.stop(a.currentTime+.1);
+      this.timer=setTimeout(play,Math.max(52,168/(this.mountainSpeed||1)));
+    };play()
+  }
+};
+
+
+function retroFrame(label='JW RETRO DECK'){
+  ctx.save();ctx.globalAlpha=.12;ctx.fillStyle='#fff';
+  for(let y=1;y<H;y+=4)ctx.fillRect(0,y,W,1);
+  ctx.globalAlpha=1;ctx.strokeStyle='#ffffff15';ctx.lineWidth=5;ctx.strokeRect(5,5,W-10,H-10);
+  ctx.fillStyle='#ffffff40';ctx.font='10px monospace';ctx.fillText(label,12,H-12);ctx.restore()
+}
 
 function toast(msg,ms=1700){const el=$('#toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),ms)}
 
@@ -170,8 +233,15 @@ class MountainGame extends Game{
   stop(){super.stop()}
 }
 
+
+// Add a CRT/arcade finish to every built-in game without altering its gameplay.
+for(const C of [SnakeGame,PongGame,BlockGame,MazeGame,BreakerGame,RocksGame,BrawlGame,MountainGame]){
+  const d=C.prototype.draw;
+  C.prototype.draw=function(){d.call(this);retroFrame(this.id==='mountain'?'MOUNTAIN KING · PRACTICE':'JW RETRO DECK')}
+}
+
 const gameDefs=[
-  {id:'mountain',title:'Mountain King Tribute',desc:'Collect diamonds, find the Flame Spirit, claim the crown and escape to the summit.',accent:'#ffb83d',orientation:'landscape',controls:'action',how:`A personal tribute built from scratch around the documented 1983 play loop: collect 1,000 diamond points, use music to locate the Flame Spirit, take it to the shrine, claim the crown, then escape to the summit. The soundtrack is a newly synthesised rendition of Grieg’s public-domain “In the Hall of the Mountain King”; no original ROM, code, graphics or recording is included.<br><br><b>Controls:</b> D-pad = run/jump. <kbd>A</kbd> = collect/interact. <kbd>X</kbd> also jumps.`,make:()=>new MountainGame()},
+  {id:'mountain',title:'Mountain King Practice',desc:'Collect diamonds, find the Flame Spirit, claim the crown and escape to the summit.',accent:'#ffb83d',orientation:'landscape',controls:'action',how:`A practice version built from scratch around the documented 1983 play loop: collect 1,000 diamond points, use music to locate the Flame Spirit, take it to the shrine, claim the crown, then escape to the summit. The soundtrack is a newly synthesised rendition of Grieg’s public-domain “In the Hall of the Mountain King”; no original ROM, code, graphics or recording is included.<br><br><b>Controls:</b> D-pad = run/jump. <kbd>A</kbd> = collect/interact. <kbd>X</kbd> also jumps.`,make:()=>new MountainGame()},
   {id:'maze',title:'Maze Chase',desc:'Pellets, pursuing ghosts and wrap-around tunnels. Fast, clean and movement-only.',accent:'#ffe24e',orientation:'any',controls:'mirror',how:`Clear every pellet while avoiding the three pursuers. The left D-pad and right-side movement pad both control direction. The open tunnel wraps from one side to the other.`,make:()=>new MazeGame()},
   {id:'blocks',title:'Block Stack',desc:'A tight falling-block puzzle with line clears, rotation and hard drop.',accent:'#b26ee5',orientation:'any',controls:'action',how:`Build complete horizontal lines. D-pad moves the piece. <kbd>A</kbd>/<kbd>X</kbd> rotates. <kbd>B</kbd> hard-drops. Clear 10 lines to unlock the Sunset console skin.`,make:()=>new BlockGame()},
   {id:'pong',title:'Table Tennis',desc:'The classic side-to-side paddle duel. First to seven wins.',accent:'#e7e7e7',orientation:'any',controls:'mirror',how:`Move your right paddle up and down. Use either D-pad, or the right-side upper/lower controls. First to 7 wins.`,make:()=>new PongGame()},
@@ -181,24 +251,119 @@ const gameDefs=[
   {id:'brawl',title:'Street Brawl',desc:'A compact side-scrolling beat-’em-up with punches, kicks and escalating waves.',accent:'#ff716b',orientation:'landscape',controls:'action',how:`Landscape game. D-pad moves. <kbd>A</kbd> punches, <kbd>B</kbd> attacks, <kbd>X</kbd> jumps. Survive escalating waves; clear three to earn the Street Clean-up achievement.`,make:()=>new BrawlGame()}
 ];
 const defs=Object.fromEntries(gameDefs.map(g=>[g.id,g]));
-function renderLibrary(){const g=$('#gameGrid');g.innerHTML='';gameDefs.forEach(d=>{const b=document.createElement('button');b.className='gameCard';b.style.setProperty('--accent',d.accent);b.innerHTML=`<div class="gameVisual"></div><h3>${d.title}</h3><p>${d.desc}</p><div class="metaRow"><span class="tag">${d.orientation==='landscape'?'Landscape':'Portrait + Landscape'}</span><span class="tag">${d.controls==='mirror'?'Movement':'Action'}</span>${stats.high[d.id]!=null?`<span class="tag">Best ${stats.high[d.id]}</span>`:''}</div>`;b.onclick=()=>startGame(d.id);g.appendChild(b)})}
+const gameArt={mountain:'game-mountain.jpg',maze:'game-maze.jpg',blocks:'game-blocks.jpg',pong:'game-pong.jpg',snake:'game-snake.jpg',breaker:'game-breaker.jpg',rocks:'game-rocks.jpg',brawl:'game-brawl.jpg'};
+function renderLibrary(){
+  const g=$('#gameGrid');g.innerHTML='';
+  gameDefs.forEach(d=>{
+    const b=document.createElement('button');b.className='gameCard';b.style.setProperty('--accent',d.accent);
+    b.innerHTML=`<div class="gameVisual"><img src="./${gameArt[d.id]||'game-mountain.jpg'}" alt=""></div><div class="gameBody"><h3>${d.title}</h3><p>${d.desc}</p><div class="metaRow"><span class="tag">${d.orientation==='landscape'?'Landscape':'Portrait + Landscape'}</span><span class="tag">${d.controls==='mirror'?'Movement':'Action'}</span>${stats.high[d.id]!=null?`<span class="tag">Best ${stats.high[d.id]}</span>`:''}</div></div>`;
+    b.onclick=()=>{audio.click();startGame(d.id)};g.appendChild(b)
+  })
+}
 
 let currentGame=null,currentDef=null,last=performance.now(),raf=0;
-function startGame(id){currentDef=defs[id];currentGame=currentDef.make();markPlayed(id);audio.ensure();$('#gameTitle').textContent=currentDef.title.toUpperCase();$('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');configureControls();checkOrientation();cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(loop)}
-function configureControls(){const mirror=currentDef.controls==='mirror';$('#mirrorPad').classList.toggle('hidden',!mirror);$('#actionPad').classList.toggle('hidden',mirror)}
-function loop(t){if(!currentGame)return;let dt=Math.min(34,t-last);last=t;if(!currentGame.paused&&!orientationBlocked()){currentGame.update(dt)}currentGame.draw();$('#hudText').textContent=currentGame.hud();input.frame();raf=requestAnimationFrame(loop)}
-function exitGame(){if(!currentGame)return;currentGame.stop();currentGame=null;currentDef=null;cancelAnimationFrame(raf);$('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#menuDialog').close?.();renderLibrary()}
-function restartGame(){if(!currentDef)return;currentGame?.stop();currentGame=currentDef.make();$('#menuDialog').close?.();last=performance.now()}
-function togglePause(){if(!currentGame)return;currentGame.paused=!currentGame.paused;if(currentGame.paused)audio.stop();else if(currentGame.id==='mountain'&&(currentGame.spiritReady||currentGame.crown))audio.mountain(currentGame.crown?1:.7,currentGame.crown?1.45:1);toast(currentGame.paused?'PAUSED':'RESUMED')}
-function openMenu(){if(!currentGame)return;currentGame.paused=true;audio.stop();$('#menuGameName').textContent=currentDef.title;$('#menuDialog').showModal()}
+function showConsole(def){
+  currentDef=def;markPlayed(def.id);audio.unlock();$('#gameTitle').textContent=def.title.toUpperCase();
+  $('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');configureControls();checkOrientation();
+}
+function startGame(id){
+  originalMode=false;$('#javatari-screen').classList.add('hidden');$('#gameCanvas').classList.remove('hidden');
+  currentDef=defs[id];currentGame=currentDef.make();showConsole(currentDef);
+  cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(loop)
+}
+function configureControls(){const mirror=currentDef?.controls==='mirror';$('#mirrorPad').classList.toggle('hidden',!mirror);$('#actionPad').classList.toggle('hidden',mirror)}
+function loop(t){if(!currentGame||originalMode)return;let dt=Math.min(34,t-last);last=t;if(!currentGame.paused&&!orientationBlocked()){currentGame.update(dt)}currentGame.draw();$('#hudText').textContent=currentGame.hud();input.frame();raf=requestAnimationFrame(loop)}
+function exitGame(){
+  audio.stop();
+  if(originalMode&&javatariReady){try{Javatari.room.consoleControls.releaseControllers();Javatari.room.consoleControls.processKey(80,true);Javatari.room.consoleControls.processKey(80,false)}catch(e){}}
+  currentGame?.stop?.();currentGame=null;currentDef=null;originalMode=false;cancelAnimationFrame(raf);
+  $('#javatari-screen').classList.add('hidden');$('#gameCanvas').classList.remove('hidden');
+  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#menuDialog').close?.();renderLibrary()
+}
+function restartGame(){
+  if(originalMode){if(originalRomBytes)runOriginalRom(originalRomBytes,true);$('#menuDialog').close?.();return}
+  if(!currentDef)return;currentGame?.stop();currentGame=currentDef.make();$('#menuDialog').close?.();last=performance.now()
+}
+function togglePause(){
+  if(originalMode&&javatariReady){try{Javatari.room.consoleControls.processKey(80,true);Javatari.room.consoleControls.processKey(80,false);toast('PAUSE TOGGLED')}catch(e){}return}
+  if(!currentGame)return;currentGame.paused=!currentGame.paused;if(currentGame.paused)audio.stop();else if(currentGame.id==='mountain'&&(currentGame.spiritReady||currentGame.crown))audio.mountain(currentGame.crown?1:.7,currentGame.crown?1.45:1);toast(currentGame.paused?'PAUSED':'RESUMED')
+}
+function openMenu(){if(!currentGame&&!originalMode)return;if(currentGame)currentGame.paused=true;if(!originalMode)audio.stop();$('#menuGameName').textContent=currentDef?.title||'Game';$('#menuDialog').showModal()}
 function orientationBlocked(){return currentDef?.orientation==='landscape'&&matchMedia('(orientation: portrait)').matches}
-function checkOrientation(){if(!currentGame)return;$('#rotatePrompt').classList.toggle('hidden',!orientationBlocked())}
+function checkOrientation(){if(!currentDef)return;$('#rotatePrompt').classList.toggle('hidden',!orientationBlocked())}
 addEventListener('orientationchange',()=>setTimeout(checkOrientation,150));addEventListener('resize',checkOrientation);
 
 $('#homeBtn').onclick=()=>currentGame?openMenu():null;$('#menuBtn').onclick=openMenu;$('#pauseBtn').onclick=togglePause;
-$('#resumeBtn').onclick=()=>{currentGame.paused=false;$('#menuDialog').close();last=performance.now()};$('#restartBtn').onclick=restartGame;$('#exitGameBtn').onclick=exitGame;
+$('#resumeBtn').onclick=()=>{if(currentGame)currentGame.paused=false;$('#menuDialog').close();last=performance.now()};$('#restartBtn').onclick=restartGame;$('#exitGameBtn').onclick=exitGame;
 $('#howToBtn').onclick=()=>{$('#menuDialog').close();$('#infoTitle').textContent=currentDef.title;$('#infoBody').innerHTML=currentDef.how;$('#infoDialog').showModal()};
 $('#settingsBtn').onclick=()=>{renderSkins();$('#settingsDialog').showModal()};$('#achievementsBtn').onclick=()=>{renderAchievements();$('#achievementsDialog').showModal()};
+$('#soundBtn').onclick=()=>{prefs.sound=!prefs.sound;saveAll();applyPrefs();if(prefs.sound){audio.test();toast('SOUND ON')}else{audio.stop();toast('SOUND OFF')}};
+$('#soundTestBtn').onclick=()=>{prefs.sound=true;saveAll();applyPrefs();audio.test();toast('Sound test')};
+
+
+// ---- Original Atari 2600 cartridge mode ----
+const JVATARI_URL='https://cdn.jsdelivr.net/gh/ppeccin/javatari.js@f954960ddfbd8b8645de447bc7dc7a1eda066877/release/stable/5.0/embedded/javatari.js';
+function idbOpen(){return new Promise((resolve,reject)=>{const r=indexedDB.open('jw-retro-roms',1);r.onupgradeneeded=()=>r.result.createObjectStore('roms');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function romGet(){try{const db=await idbOpen();return await new Promise((resolve,reject)=>{const tx=db.transaction('roms','readonly');const r=tx.objectStore('roms').get('mountain-king');r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}catch{return null}}
+async function romPut(buf,name){const db=await idbOpen();await new Promise((resolve,reject)=>{const tx=db.transaction('roms','readwrite');tx.objectStore('roms').put({name,bytes:buf,at:Date.now()},'mountain-king');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+async function romDelete(){try{const db=await idbOpen();await new Promise((resolve,reject)=>{const tx=db.transaction('roms','readwrite');tx.objectStore('roms').delete('mountain-king');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}catch{}}
+
+function loadJavatari(){
+  if(javatariReady)return Promise.resolve();
+  if(javatariLoading)return javatariLoading;
+  javatariLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');s.src=JVATARI_URL;s.crossOrigin='anonymous';
+    s.onload=()=>{
+      try{
+        Javatari.AUTO_START=false;Javatari.SCREEN_ELEMENT_ID='javatari-screen';Javatari.SCREEN_CONSOLE_PANEL_DISABLED=true;
+        Javatari.SCREEN_CONTROL_BAR=0;Javatari.TOUCH_MODE=0;Javatari.SCREEN_FULLSCREEN_MODE=-2;Javatari.SCREEN_DEFAULT_ASPECT=1;
+        Javatari.CARTRIDGE_SHOW_RECENT=false;Javatari.ALLOW_URL_PARAMETERS=false;
+        if(Javatari.start)Javatari.start(false);
+        javatariReady=true;resolve()
+      }catch(e){reject(e)}
+    };
+    s.onerror=()=>reject(new Error('Emulator engine could not load'));
+    document.head.appendChild(s)
+  });
+  return javatariLoading
+}
+async function runOriginalRom(record,restart=false){
+  try{
+    originalRomBytes=record;
+    const buf=record.bytes||record; const bytes=buf instanceof Uint8Array?buf:new Uint8Array(buf);
+    await loadJavatari();
+    audio.unlock();
+    originalMode=true;currentGame=null;
+    const def={id:'mountain-original',title:'Mountain King · Original Atari 2600',orientation:'landscape',controls:'action',
+      how:'This is the original Atari 2600 cartridge running through an emulator. D-pad = Atari joystick. Any of the four coloured action buttons = the Atari fire button. MENU is outside the gameplay controls; PAUSE toggles emulator pause.'};
+    showConsole(def);cancelAnimationFrame(raf);
+    $('#gameCanvas').classList.add('hidden');$('#javatari-screen').classList.remove('hidden');$('#hudText').textContent='ORIGINAL 2600';
+    await new Promise(r=>setTimeout(r,350));
+    const loader=Javatari.room?.fileLoader;
+    if(!loader)throw new Error('Emulator not ready');
+    loader.loadFromContent(record.name||'Mountain King.bin',bytes,loader.OPEN_TYPE.ROM,0,false);
+    setTimeout(()=>{try{Javatari.room.consoleControls.processKey(13|0x10000,true);Javatari.room.consoleControls.processKey(13|0x10000,false)}catch(e){}},700);
+    $('#originalDialog').close?.();toast(restart?'Original cartridge restarted':'Original Mountain King loaded',2200)
+  }catch(e){
+    console.error(e);toast('Could not start original cartridge mode',2600)
+  }
+}
+async function refreshRomStatus(){
+  const r=await romGet();originalRomBytes=r;
+  $('#romStatus').textContent=r?`Saved on this device: ${r.name}`:'No Mountain King cartridge image saved on this device yet.';
+  $('#runStoredRomBtn').classList.toggle('hidden',!r);$('#removeStoredRomBtn').classList.toggle('hidden',!r)
+}
+async function openOriginalMountain(){audio.click();await refreshRomStatus();$('#originalDialog').showModal()}
+$('#playOriginalMountain').onclick=e=>{e.stopPropagation();openOriginalMountain()};
+$('#originalMountainCard').onclick=e=>{if(e.target.closest('button'))return;openOriginalMountain()};
+$('#originalMountainCard').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openOriginalMountain()}};
+$('#mountainRomInput').onchange=async e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  if(f.size>1024*1024){toast('That file is too large for an Atari 2600 cartridge');return}
+  const buf=await f.arrayBuffer();const rec={name:f.name,bytes:buf,at:Date.now()};await romPut(buf,f.name);originalRomBytes=rec;await refreshRomStatus();runOriginalRom(rec)
+};
+$('#runStoredRomBtn').onclick=async()=>{const r=await romGet();if(r)runOriginalRom(r)};
+$('#removeStoredRomBtn').onclick=async()=>{await romDelete();originalRomBytes=null;await refreshRomStatus();toast('Saved cartridge forgotten')};
 
 function renderRequests(){const el=$('#requestList');el.innerHTML=stats.requests.length?'<p class="eyebrow">SAVED ON THIS DEVICE</p>':'';stats.requests.slice().reverse().forEach(r=>{const d=document.createElement('div');d.className='requestItem';d.innerHTML=`<strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.platform||'Platform not set')} • ${new Date(r.at).toLocaleDateString()}</small>`;el.appendChild(d)})}
 function escapeHtml(s=''){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}

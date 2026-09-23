@@ -1,15 +1,25 @@
 {
-  "name":"JW Retro Deck",
-  "short_name":"Retro Deck",
-  "description":"A hand-picked offline retro arcade with an adaptive console interface.",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "orientation":"any",
-  "background_color":"#111214",
-  "theme_color":"#202226",
-  "icons":[
-    {"src":"./icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  "name": "JW Retro Deck",
+  "short_name": "Retro Deck",
+  "description": "A curated nostalgic handheld game deck with adaptive controls and original-cartridge emulation support.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#100d12",
+  "theme_color": "#171318",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
