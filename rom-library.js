@@ -29,6 +29,8 @@ let activeId=null;
 let activeBlobUrl=null;
 let playerFrame=null;
 let importBusy=false;
+let pendingSourceItem=null;
+let pendingSourceAdapter=null;
 
 function notify(msg,ms=2200){
   const el=$('#toast');
@@ -166,7 +168,7 @@ async function importBuffer(buf,fileName,overrides={}){
   const duplicate=records.find(r=>digest&&r.sha1===digest);
   if(duplicate){notify(`${duplicate.title} is already in your library`);return duplicate}
   const inside=internalTitle(platform,buf);
-  const rec={kind:'library-rom',id:uuid(),fileName,title:overrides.title||bestTitle(fileName,platform,buf),platform,core:SYSTEMS[platform]?.core||'',bytes:buf,size:buf.byteLength,sha1:digest,crc32:crc,internalTitle:inside,importedAt:Date.now(),source:overrides.source||'local'};
+  const rec={kind:'library-rom',id:uuid(),fileName,title:overrides.title||bestTitle(fileName,platform,buf),platform,core:SYSTEMS[platform]?.core||'',bytes:buf,size:buf.byteLength,sha1:digest,crc32:crc,internalTitle:inside,importedAt:Date.now(),source:overrides.source||'local',sourcePageUrl:overrides.sourcePageUrl||'',catalogYear:overrides.year||'',catalogPlatform:overrides.catalogPlatform||''};
   await putRecord(rec);await reloadRecords();
   notify(platform?`${rec.title} added to Retro Deck`:`${rec.title} added — choose its platform`);
   refreshCoverFor(rec,true).catch(()=>{});
@@ -274,29 +276,46 @@ function exitRom(){
 
 async function sourceSearch(q){
   const adapter=window.RETRO_DECK_ROM_SOURCE,results=$('#sourceResults');results.innerHTML='';
-  if(!adapter?.search){$('#sourceStatus').textContent='No ROM source is connected yet. Provide the source and its search/download structure to connect it here.';return}
-  $('#sourceStatus').textContent=`Searching ${adapter.name||'connected source'}…`;
+  if(!adapter?.search){$('#sourceStatus').textContent='No game catalogue is connected.';return}
+  $('#sourceStatus').textContent=`Searching ${adapter.name||'connected catalogue'}…`;
   try{
-    const items=await adapter.search(q);$('#sourceStatus').textContent=`${adapter.name||'Connected source'} · ${items.length} result${items.length===1?'':'s'}`;
-    if(!items.length){results.innerHTML='<div class="sourceEmpty">No matches.</div>';return}
+    const items=await adapter.search(q);
+    const mode=adapter.lastMode==='offline-seed'?' · offline cached match':adapter.lastMode==='live'?' · live catalogue':'';
+    $('#sourceStatus').textContent=`${adapter.name||'Connected catalogue'} · ${items.length} result${items.length===1?'':'s'}${mode}`;
+    if(!items.length){results.innerHTML='<div class="sourceEmpty">No matching titles found.</div>';return}
     items.forEach((item,i)=>{
-      const card=document.createElement('div');card.className='sourceResult';card.innerHTML=`${item.coverUrl?`<img src="${esc(item.coverUrl)}" alt="">`:'<div class="sourceMiniCover">ROM</div>'}<div><strong>${esc(item.title||item.fileName||'Untitled')}</strong><small>${esc(item.platform||'Platform not specified')}</small></div><button type="button" data-i="${i}">INSTALL</button>`;
-      card.querySelector('button').onclick=()=>installSourceItem(item,adapter);results.appendChild(card)
+      const detail=[item.platform||'Platform not specified',item.year||''].filter(Boolean).join(' · ');
+      const card=document.createElement('div');card.className='sourceResult';
+      card.innerHTML=`${item.coverUrl?`<img src="${esc(item.coverUrl)}" alt="">`:'<div class="sourceMiniCover">GAME</div>'}<div><strong>${esc(item.title||'Untitled')}</strong><small>${esc(detail)}</small></div><button type="button" data-i="${i}">ADD ROM</button>`;
+      card.querySelector('button').onclick=()=>chooseSourceRom(item,adapter);results.appendChild(card)
     })
-  }catch(e){console.error(e);$('#sourceStatus').textContent='Source search failed. Check the source connection/CORS settings.'}
+  }catch(e){console.error(e);$('#sourceStatus').textContent=e.message||'Catalogue search failed.';results.innerHTML='<div class="sourceEmpty">You can still use IMPORT ROM above; Retro Deck will identify and cover-match the file locally.</div>'}
 }
-async function installSourceItem(item,adapter){
+function chooseSourceRom(item,adapter){
+  pendingSourceItem=item;pendingSourceAdapter=adapter;
+  const input=$('#sourceRomFileInput');if(!input)return;
+  input.value='';input.click();
+}
+async function importChosenSourceRom(file){
+  if(!file||!pendingSourceItem)return;
+  const item=pendingSourceItem,adapter=pendingSourceAdapter||window.RETRO_DECK_ROM_SOURCE;
+  pendingSourceItem=null;pendingSourceAdapter=null;
   try{
-    notify(`Installing ${item.title||'game'}…`,6000);await ensurePersistentStorage();let data;
-    if(adapter.download)data=await adapter.download(item);else if(item.downloadUrl){const r=await fetch(item.downloadUrl);if(!r.ok)throw new Error(`Download failed (${r.status})`);data=await r.blob()}else throw new Error('Source result has no download URL');
-    let buf,fileName=item.fileName||`${item.title||'game'}.${item.extension||'rom'}`;
-    if(data instanceof ArrayBuffer)buf=data;else if(ArrayBuffer.isView(data))buf=data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength);else if(data instanceof Blob){buf=await data.arrayBuffer();if(data.name)fileName=data.name}else throw new Error('Unsupported source download type');
-    const platform=platformFromLabel(item.platform)||detectPlatform(fileName,buf);const rec=await importBuffer(buf,fileName,{title:item.title,platform,source:adapter.name||'connected source'});
-    if(item.coverUrl&&!rec.coverBlob){try{const r=await fetch(item.coverUrl);if(r.ok){rec.coverBlob=await r.blob();rec.coverSource=item.coverUrl;await putRecord(rec);await reloadRecords()}}catch{}}
-    notify(`${rec.title} installed`);$('#sourceDialog').close()
-  }catch(e){console.error(e);notify(e.message||'Install failed',3500)}
+    notify(`Adding ${item.title||file.name}…`,6000);await ensurePersistentStorage();
+    const buf=await file.arrayBuffer();
+    const detected=detectPlatform(file.name,buf),catalogPlatform=platformFromLabel(item.platform||'');
+    const platform=detected||catalogPlatform;
+    const rec=await importBuffer(buf,file.name,{title:item.title||'',platform,source:adapter?.name||'catalogue',sourcePageUrl:item.pageUrl||'',year:item.year||'',catalogPlatform:item.platform||''});
+    if(item.coverUrl&&!rec.coverBlob){try{const r=await fetchWithTimeout(item.coverUrl,{cache:'force-cache'},3000);if(r.ok){const blob=await r.blob();if(blob.type.startsWith('image/')){rec.coverBlob=blob;rec.coverSource=item.coverUrl;await putRecord(rec);await reloadRecords()}}}catch{}}
+    // Always retry the normalized Libretro box-art matcher using the catalogue title/platform.
+    if(!rec.coverBlob)refreshCoverFor(rec,true).catch(()=>{});
+    notify(`${rec.title} added to your collection`);$('#sourceDialog').close();updateStorageStatus();
+  }catch(e){console.error(e);notify(e.message||'Could not add ROM',3500)}
 }
-function refreshSourceStatus(){const a=window.RETRO_DECK_ROM_SOURCE;$('#sourceStatus').textContent=a?.search?`${a.name||'ROM source'} connected. Search results will install directly into Retro Deck.`:'No ROM source is connected yet. Provide the source and I can wire its catalogue into this screen.'}
+function refreshSourceStatus(){
+  const a=window.RETRO_DECK_ROM_SOURCE;
+  $('#sourceStatus').textContent=a?.search?`${a.name||'Game catalogue'} connected. Search here, choose a result, then select a ROM file you already have.`:'No game catalogue is connected.'
+}
 
 // Public bridge used by the main controller code.
 window.RetroDeckROM={
@@ -316,6 +335,7 @@ if(pause)pause.onclick=e=>{if(active){sendKey('select',true);setTimeout(()=>send
 $('#romExitBtn').onclick=exitRom;
 $('#importRomBtn').onclick=()=>$('#romFileInput').click();
 $('#romFileInput').onchange=e=>importFiles([...e.target.files]);
+$('#sourceRomFileInput').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(f)importChosenSourceRom(f)};
 $('#librarySearch').addEventListener('input',renderRecords);
 $('#sourceSearchBtn').onclick=()=>{refreshSourceStatus();$('#sourceResults').innerHTML='';$('#sourceDialog').showModal();setTimeout(()=>$('#sourceQuery').focus(),120)};
 $('#sourceSearchForm').addEventListener('submit',e=>{e.preventDefault();const q=$('#sourceQuery').value.trim();if(q)sourceSearch(q)});

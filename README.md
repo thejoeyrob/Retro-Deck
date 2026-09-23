@@ -1,65 +1,37 @@
-# JW Retro Deck v1.3.0
+# JW Retro Deck v1.4.0
 
 Flat GitHub-Pages-ready PWA.
 
-## What changed in v1.3
+## v1.4 highlights
 
-- Added a persistent multi-system **ROM Library** backed by IndexedDB.
-- Import one or multiple ROM files; they remain in the Retro Deck library on that device.
-- Automatic platform detection for common single-file formats:
-  - Atari 2600
-  - Nintendo NES
-  - Super Nintendo / SNES
-  - Game Boy / Game Boy Color / Game Boy Advance
-  - Sega Mega Drive / Genesis
-  - Sega Master System
-  - Sega Game Gear
-  - Nintendo 64
-- Mega Drive/Genesis cartridge-header recognition (including internal game title where available).
-- Game Boy, GBA and SNES internal-title recognition where available.
-- SHA-1 and CRC32 fingerprints are stored with each ROM for future exact-match metadata/source integrations.
-- Automatic cover-art matching against the Libretro thumbnail collection. A matched cover is saved into IndexedDB with the ROM so it remains attached to the library entry.
-- Adaptive EmulatorJS launcher selects the correct emulator core for the detected platform.
-- Existing Retro Deck D-pad and four action buttons are retained as the outer controller. During ROM play the two centre system buttons become START and SELECT.
-- Removed the visible imitation-game collection. Only **Snake** and **Table Tennis** remain as built-in quick games.
-- Added a search/filter box for the user's ROM collection.
-- Added a ROM details editor so title/platform can be corrected manually and cover matching can be retried.
-- Added a source-search screen and adapter hook ready for an authorised ROM catalogue/source.
+- Keeps **Snake** and **Table Tennis** as the only visible built-in quick games.
+- Persistent multi-system ROM collection stored in IndexedDB.
+- Automatic ROM platform/header recognition and SHA-1/CRC32 fingerprinting.
+- Adaptive EmulatorJS launching for Atari 2600, NES, SNES, Game Boy/Color/Advance, Mega Drive/Genesis, Master System, Game Gear and Nintendo 64.
+- Original-style box/front-cover matching through Libretro thumbnail repositories; matched artwork is copied into the local library record.
+- **My Abandonware catalogue search** is wired into the existing in-app source-search screen.
+- Catalogue results are shown in Retro Deck. Selecting **ADD ROM** opens the device file picker, then the chosen ROM is stored in Retro Deck with the selected catalogue title/platform/year and automatic cover matching.
+- The My Abandonware integration is metadata/catalogue-only. It does not retrieve or expose third-party ROM download URLs.
+- The adapter attempts a direct read-only catalogue request first. If browser CORS blocks that public HTML page, it can fall back to the public AllOrigins metadata relay; the relay is used only to read catalogue HTML, never to retrieve game files. If both paths are unavailable, local ROM import remains available. A small offline metadata seed supports Streets of Rage 1/2/3 and Road Rash as a graceful fallback/demo.
 
-## ROM source integration
+## ROM library
 
-`rom-source.js` is intentionally unconfigured in this package. A source can be connected without changing the rest of the app by assigning:
+Supported common single-file formats include `.a26`, `.bin`, `.rom`, `.nes`, `.unf`, `.unif`, `.sfc`, `.smc`, `.fig`, `.gb`, `.gbc`, `.gba`, `.md`, `.gen`, `.smd`, `.68k`, `.sms`, `.gg`, `.z64`, `.n64` and `.v64`.
 
-```js
-window.RETRO_DECK_ROM_SOURCE = {
-  name: 'Source name',
-  async search(query) {
-    return [
-      {
-        id: 'source-id',
-        title: 'Game title',
-        platform: 'Sega Mega Drive',
-        coverUrl: 'https://…',
-        downloadUrl: 'https://…',
-        fileName: 'Game (Europe).md'
-      }
-    ];
-  }
-};
-```
+Mega Drive/Genesis header recognition means a correctly dumped Streets of Rage cartridge file can normally be identified as Sega Mega Drive/Genesis even when the filename itself is generic.
 
-A source may instead implement `download(result)` if download authentication or a custom request is required. Search results are rendered inside Retro Deck; selecting **INSTALL** downloads the ROM into the app's own IndexedDB library without redirecting to another site.
+## My Abandonware source workflow
 
-Only connect sources and ROM files you are authorised to access/use (for example your own dumps, homebrew/public-domain ROMs, or a service that grants download rights).
+1. Tap **SEARCH SOURCE**.
+2. Search for a game title, for example `Streets of Rage`.
+3. Choose the catalogue match.
+4. Tap **ADD ROM**.
+5. Pick the ROM file you already have on the device.
+6. Retro Deck stores the ROM locally, detects the platform, adds catalogue metadata and searches for matching box art.
+7. The game then appears as a cover thumbnail in **YOUR COLLECTION** and launches through the matching emulator core.
 
-## Emulator engine
-
-ROM play uses EmulatorJS through its stable CDN and selects a system core dynamically. On first use of a given core, an internet connection may be required for the emulator assets. The service worker caches successfully fetched assets for subsequent use where the browser permits it.
-
-## Cover art
-
-Retro Deck attempts title/filename matching against Libretro's public thumbnail repositories. If a match is found, the image is copied into the local IndexedDB record. Cover lookup therefore needs internet access the first time it runs.
+No browser redirect is required for the catalogue/result selection flow.
 
 ## Install / deploy
 
-Upload the **contents** of this ZIP to the root of your GitHub Pages repository (not the enclosing folder). The app remains a flat PWA: `index.html`, scripts, styles, manifest, service worker and image assets all sit at repository root.
+Upload the **contents** of this ZIP to the root of the GitHub Pages repository. Do not upload the enclosing folder. The build remains flat: `index.html`, scripts, styles, service worker, manifest and images are all at root level.

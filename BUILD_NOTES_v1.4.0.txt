@@ -1,0 +1,30 @@
+JW RETRO DECK v1.4.0 — SOURCE/CATALOGUE BUILD
+================================================
+
+BASE
+- Built directly from JW Retro Deck v1.3.0 ROM Library Flat PWA.
+- Existing ROM library, cover matching, emulator launcher, controller shell,
+  Snake and Table Tennis retained.
+
+MY ABANDONWARE CATALOGUE
+- rom-source.js now identifies My Abandonware as the configured catalogue.
+- Search URL is requested in the background where browser CORS permits.
+- If direct catalogue HTML is blocked, a public AllOrigins CORS relay is used
+  for metadata HTML only; it is never used for game files.
+- Result parsing extracts title, platform, year, source page and optional image.
+- Search results remain inside Retro Deck.
+- Selecting ADD ROM invokes a local file picker instead of redirecting away.
+- Chosen ROM is stored in IndexedDB and linked to catalogue metadata.
+- Platform detection from ROM data/extension takes precedence over catalogue
+  text, allowing the correct system variant of multi-platform games.
+- Box-art matching is retried after catalogue-assisted import.
+- Offline metadata seed: Streets of Rage 1/2/3 and Road Rash.
+
+RIGHTS/NETWORK BOUNDARY
+- No third-party ROM download URLs are retrieved or exposed by this build.
+- My Abandonware is used as a catalogue/recognition source only.
+- Flat PWAs cannot bypass a third-party CORS policy. When live catalogue HTML
+  cannot be read cross-origin, the app reports that and local ROM import works.
+
+PWA
+- Service-worker cache bumped to jw-retro-deck-v1.4.0.

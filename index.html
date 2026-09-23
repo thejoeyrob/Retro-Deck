@@ -18,7 +18,7 @@
     <button class="iconBtn" id="homeBtn" aria-label="Home">⌂</button>
     <div class="brandLockup">
       <div class="brandMark">JW</div>
-      <div><strong>RETRO DECK</strong><span>JW EDS · ROM LIBRARY + QUICK GAMES</span></div>
+      <div><strong>RETRO DECK</strong><span>JW EDS · ROM LIBRARY · MY ABANDONWARE CATALOGUE</span></div>
     </div>
     <div class="topActions">
       <button class="iconBtn" id="soundBtn" aria-label="Sound">♪</button>
@@ -179,12 +179,13 @@
 
   <dialog id="sourceDialog" class="panelDialog largeDialog">
     <form method="dialog" class="dialogCard" id="sourceSearchForm">
-      <div class="dialogHeader"><div><span class="eyebrow">ROM SOURCE</span><h2>Search game source</h2></div><button value="cancel" class="closeBtn">×</button></div>
-      <p id="sourceStatus" class="smallNote">No ROM source is connected yet.</p>
+      <div class="dialogHeader"><div><span class="eyebrow">MY ABANDONWARE</span><h2>Search game catalogue</h2></div><button value="cancel" class="closeBtn">×</button></div>
+      <p id="sourceStatus" class="smallNote">My Abandonware catalogue connected.</p>
       <label class="field">Search games<input id="sourceQuery" type="search" placeholder="e.g. Streets of Rage"></label>
-      <button type="submit" id="sourceSearchSubmit" class="wideBtn primary">Search inside Retro Deck</button>
+      <button type="submit" id="sourceSearchSubmit" class="wideBtn primary">Search My Abandonware</button>
       <div id="sourceResults" class="sourceResults"></div>
-      <p class="smallNote">When a compatible source is connected, results are shown here and can be installed directly into your Retro Deck library without opening another website.</p>
+      <input id="sourceRomFileInput" type="file" hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,application/octet-stream">
+      <p class="smallNote">Results stay inside Retro Deck. Choose a title, then select a ROM file you already have. Retro Deck stores it locally, identifies the system and attaches matching front-cover artwork. The app does not retrieve ROM downloads from the catalogue.</p>
     </form>
   </dialog>
 
