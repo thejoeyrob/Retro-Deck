@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#171318">
+  <meta name="theme-color" content="#07080a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Retro Deck">
@@ -15,81 +15,79 @@
 <body>
 <div id="app" class="app skin-classic">
   <header class="topbar">
-    <button class="iconBtn" id="homeBtn" aria-label="Home">⌂</button>
-    <div class="brandLockup">
+    <div class="brandLockup" aria-label="JW Retro Deck">
       <div class="brandMark">JW</div>
-      <div><strong>RETRO DECK</strong><span>JW EDS · ROM LIBRARY · MY ABANDONWARE CATALOGUE</span></div>
+      <div class="brandText"><strong>Retro Deck</strong><span>JW EDS</span></div>
     </div>
     <div class="topActions">
-      <button class="iconBtn" id="soundBtn" aria-label="Sound">♪</button>
-      <button class="iconBtn" id="achievementsBtn" aria-label="Achievements">★</button>
-      <button class="iconBtn" id="settingsBtn" aria-label="Settings">⚙</button>
+      <button class="iconBtn" id="homeBtn" aria-label="Home" title="Home">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>
+      </button>
+      <button class="iconBtn" id="soundBtn" aria-label="Sound" title="Sound">♪</button>
+      <button class="iconBtn" id="achievementsBtn" aria-label="Achievements" title="Achievements">★</button>
+      <button class="iconBtn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
     </div>
   </header>
 
   <main id="libraryView" class="view libraryView active">
-    <section class="heroVisual">
-      <img src="./hero-retro.png" alt="">
-      <div class="heroShade"></div>
-      <div class="heroCopy">
-        <p class="eyebrow">JW RETRO DECK</p>
-        <h1>Games never get old.</h1>
-        <p>Your own retro game shelf. Import a ROM once, Retro Deck detects the platform, stores it on this device, finds matching cover art, and launches the correct emulator.</p>
+    <section class="libraryMasthead">
+      <div class="mastheadCopy">
+        <h1>Library</h1>
+        <p>Your games, stored on this device and ready to play.</p>
       </div>
-    </section>
-
-    <section class="romHub" aria-label="ROM library controls">
-      <div class="romHubCopy">
-        <span class="ribbon">ROM READER · MULTI-SYSTEM</span>
-        <h2>Build your own cartridge shelf.</h2>
-        <p>Import ROM files you already have. Retro Deck stores them in its local game bank, identifies the system, remembers the game, and attempts to match the original box cover automatically.</p>
-        <div class="romActions">
-          <button class="playNow inlineAction" id="importRomBtn" type="button">＋ IMPORT ROM</button>
-          <button class="sourceBtn" id="sourceSearchBtn" type="button">⌕ SEARCH SOURCE</button>
-        </div>
+      <div class="libraryTools">
+        <label class="searchControl" for="librarySearch">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+          <input id="librarySearch" type="search" inputmode="search" autocomplete="off" placeholder="Search library">
+        </label>
+        <button class="toolButton" id="sourceSearchBtn" type="button"><span class="toolIcon">⌕</span><span>Find game</span></button>
+        <button class="toolButton primary" id="importRomBtn" type="button"><span class="toolIcon">＋</span><span>Import ROM</span></button>
         <input id="romFileInput" type="file" multiple hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,application/octet-stream">
       </div>
-      <div class="romHubStatus">
-        <span id="romCount" class="romCount">0 ROMS</span>
-        <span id="storageStatus" class="smallMuted">Checking local storage…</span>
+    </section>
+
+    <section class="collectionSection" aria-labelledby="myGamesHeading">
+      <div class="sectionHeading">
+        <div>
+          <h2 id="myGamesHeading">My Games</h2>
+          <p id="storageStatus">Checking local storage…</p>
+        </div>
+        <span id="romCount" class="libraryCount">0 games</span>
+      </div>
+      <section id="romGrid" class="gameGrid romGrid coverShelf" aria-label="ROM collection"></section>
+      <div id="romEmpty" class="romEmpty">
+        <div class="emptyGlyph">▣</div>
+        <strong>Your collection is empty</strong>
+        <span>Import a ROM you own, or use Find game to match a title before adding it.</span>
       </div>
     </section>
 
-    <div class="sectionTitle">
-      <div><span class="eyebrow">YOUR COLLECTION</span><h2>ROM library</h2></div>
-      <input id="librarySearch" class="librarySearch" type="search" inputmode="search" placeholder="Search your games">
-    </div>
-    <section id="romGrid" class="gameGrid romGrid" aria-label="ROM collection"></section>
-    <div id="romEmpty" class="romEmpty">
-      <strong>No ROMs saved yet.</strong>
-      <span>Tap <b>Import ROM</b> and choose a game file you already own.</span>
-    </div>
-
-    <div class="sectionTitle">
-      <div><span class="eyebrow">BUILT-IN QUICK GAMES</span><h2>Snake & Table Tennis</h2></div>
-      <span class="smallMuted">Everything else comes from your ROM library.</span>
-    </div>
-    <section id="gameGrid" class="gameGrid" aria-label="Game library"></section>
+    <section class="collectionSection builtInSection" aria-labelledby="builtInHeading">
+      <div class="sectionHeading">
+        <div><h2 id="builtInHeading">Retro Deck Originals</h2><p>Two instant-play games included with the app.</p></div>
+      </div>
+      <section id="gameGrid" class="gameGrid quickShelf" aria-label="Built-in games"></section>
+    </section>
 
     <button class="requestTile hidden" id="requestGameBtn" type="button" aria-hidden="true"></button>
   </main>
 
-  <main id="consoleView" class="view consoleView">
+  <main id="consoleView" class="view consoleView" aria-label="Game console">
     <div id="rotatePrompt" class="rotatePrompt hidden">
-      <div class="rotatePhone">▭↻</div>
-      <h2>Turn your device sideways</h2>
-      <p>This game uses movement and action controls together.</p>
+      <div class="rotatePhone">↻</div>
+      <h2>Rotate to landscape</h2>
+      <p>This game is designed for a wider control layout.</p>
     </div>
 
     <div id="consoleShell" class="consoleShell">
-      <div class="consoleChrome">
-        <div class="etched">JW EDS</div>
-        <div class="cartridgeMark"><span></span>RETRO DECK</div>
-        <button id="menuBtn" class="systemBtn">MENU</button>
-        <button id="pauseBtn" class="systemBtn">PAUSE</button>
+      <div class="consoleTopRail">
+        <button id="romExitBtn" class="romExitBtn hidden" type="button">‹ Library</button>
+        <div class="gameIdentity"><strong id="gameTitle">GAME</strong><span id="hudText"></span></div>
+        <div class="deckMark">JW <span>RETRO DECK</span></div>
       </div>
 
       <div class="controlZone leftZone">
+        <div class="controlCaption">D-PAD</div>
         <div id="dpad" class="dpad" aria-label="Directional pad">
           <button data-key="up" class="dpadBtn up" aria-label="Up">▲</button>
           <button data-key="left" class="dpadBtn left" aria-label="Left">◀</button>
@@ -100,22 +98,22 @@
       </div>
 
       <section class="screenBezel">
-        <div class="screenTopline"><span id="gameTitle">GAME</span><span id="hudText"></span><button id="romExitBtn" class="romExitBtn hidden" type="button">LIBRARY</button></div>
         <div class="screenStage">
           <canvas id="gameCanvas" width="960" height="540" aria-label="Game screen"></canvas>
-          <div id="javatari-screen" class="javatariHost hidden" aria-label="Original Atari 2600 game screen"></div>
+          <div id="javatari-screen" class="javatariHost hidden" aria-label="Atari 2600 game screen"></div>
           <div id="romEmulatorHost" class="romEmulatorHost hidden" aria-label="ROM emulator"></div>
-          <div class="crtGlass"></div>
+          <div class="screenReflection"></div>
         </div>
         <div id="toast" class="toast hidden"></div>
       </section>
 
       <div class="controlZone rightZone">
-        <div id="actionPad" class="actionPad actionCross" aria-label="Action buttons">
-          <button data-key="x" class="actionBtn btnX">X</button>
-          <button data-key="y" class="actionBtn btnY">Y</button>
-          <button data-key="a" class="actionBtn btnA">A</button>
-          <button data-key="b" class="actionBtn btnB">B</button>
+        <div class="controlCaption">ACTION</div>
+        <div id="actionPad" class="actionPad" aria-label="Action buttons">
+          <button data-key="y" class="actionBtn btnY"><span>Y</span></button>
+          <button data-key="x" class="actionBtn btnX"><span>X</span></button>
+          <button data-key="b" class="actionBtn btnB"><span>B</span></button>
+          <button data-key="a" class="actionBtn btnA"><span>A</span></button>
         </div>
         <div id="mirrorPad" class="mirrorPad hidden" aria-label="Alternate movement controls">
           <button data-key="up" class="mirrorBtn up">▲</button>
@@ -124,75 +122,88 @@
           <button data-key="down" class="mirrorBtn down">▼</button>
         </div>
       </div>
+
+      <div class="systemRail" aria-label="System controls">
+        <button id="menuBtn" class="systemBtn" type="button"><span class="systemDot"></span><strong>MENU</strong></button>
+        <button id="pauseBtn" class="systemBtn" type="button"><span class="systemDot"></span><strong>PAUSE</strong></button>
+      </div>
     </div>
   </main>
 
   <dialog id="menuDialog" class="panelDialog">
-    <form method="dialog" class="dialogCard">
-      <div class="dialogHeader"><div><span class="eyebrow">SYSTEM</span><h2 id="menuGameName">Game menu</h2></div><button value="cancel" class="closeBtn">×</button></div>
-      <button type="button" id="resumeBtn" class="wideBtn primary">Resume</button>
-      <button type="button" id="restartBtn" class="wideBtn">Restart game</button>
-      <button type="button" id="howToBtn" class="wideBtn">Controls & how to play</button>
-      <button type="button" id="exitGameBtn" class="wideBtn danger">Exit to library</button>
-    </form>
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Game</span><h2 id="menuGameName">Game menu</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
+      <div class="dialogActions">
+        <button type="button" id="resumeBtn" class="wideBtn primary">Resume</button>
+        <button type="button" id="restartBtn" class="wideBtn">Restart game</button>
+        <button type="button" id="howToBtn" class="wideBtn">Controls & how to play</button>
+        <button type="button" id="exitGameBtn" class="wideBtn danger">Exit to library</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="infoDialog" class="panelDialog">
-    <form method="dialog" class="dialogCard">
-      <div class="dialogHeader"><div><span class="eyebrow">HOW TO PLAY</span><h2 id="infoTitle"></h2></div><button value="cancel" class="closeBtn">×</button></div>
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Guide</span><h2 id="infoTitle"></h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
       <div id="infoBody" class="infoBody"></div>
-    </form>
+    </div>
   </dialog>
 
   <dialog id="originalDialog" class="panelDialog largeDialog hidden">
-    <form method="dialog" class="dialogCard">
-      <div class="dialogHeader"><div><span class="eyebrow">ORIGINAL CARTRIDGE MODE</span><h2>Mountain King · Atari 2600</h2></div><button value="cancel" class="closeBtn">×</button></div>
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Atari 2600</span><h2>Mountain King</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
       <img class="dialogHero" src="./hero-retro.png" alt="">
-      <p class="originalLead">For the exact 1983 game, this mode emulates the Atari 2600 cartridge itself. That means the original game code generates the original graphics, music and sound effects.</p>
+      <p class="originalLead">Run your original Atari 2600 cartridge image through the emulator engine.</p>
       <div id="romStatus" class="romStatus">No Mountain King cartridge image saved on this device yet.</div>
-      <label class="romPicker">Choose your Mountain King cartridge image
-        <input id="mountainRomInput" type="file" accept=".bin,.a26,.rom,application/octet-stream">
-      </label>
+      <label class="romPicker">Choose cartridge image<input id="mountainRomInput" type="file" accept=".bin,.a26,.rom,application/octet-stream"></label>
       <button type="button" id="runStoredRomBtn" class="wideBtn primary hidden">Play saved original cartridge</button>
       <button type="button" id="removeStoredRomBtn" class="wideBtn hidden">Forget saved cartridge</button>
-      <p class="smallNote">The ROM itself is not bundled with Retro Deck. If you load your own cartridge image, it is stored only in this browser on this device. Emulator engine: Javatari 5.0.4.</p>
-    </form>
+      <p class="smallNote">The ROM itself is not bundled with Retro Deck. Files you add are stored locally on this device.</p>
+    </div>
   </dialog>
 
   <dialog id="romDetailsDialog" class="panelDialog largeDialog">
-    <form method="dialog" class="dialogCard">
-      <div class="dialogHeader"><div><span class="eyebrow">ROM DETAILS</span><h2 id="romDetailsHeading">Game</h2></div><button value="cancel" class="closeBtn">×</button></div>
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Game details</span><h2 id="romDetailsHeading">Game</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
       <div class="romDetailsLayout">
         <div class="romCoverPreview"><img id="romDetailsCover" alt="Game cover"><div id="romCoverFallback" class="coverFallback">NO COVER</div></div>
         <div class="romDetailsFields">
           <label class="field">Game title<input id="romTitleInput"></label>
           <label class="field">Platform<select id="romPlatformInput"></select></label>
           <div id="romHashLine" class="romHashLine"></div>
-          <button type="button" id="refreshCoverBtn" class="wideBtn">Find original cover again</button>
-          <button type="button" id="playRomBtn" class="wideBtn primary">Play game</button>
-          <button type="button" id="saveRomMetaBtn" class="wideBtn">Save details</button>
-          <button type="button" id="deleteRomBtn" class="wideBtn danger">Remove from Retro Deck</button>
+          <div class="dialogActions">
+            <button type="button" id="playRomBtn" class="wideBtn primary">Play</button>
+            <button type="button" id="refreshCoverBtn" class="wideBtn">Find cover again</button>
+            <button type="button" id="saveRomMetaBtn" class="wideBtn">Save details</button>
+            <button type="button" id="deleteRomBtn" class="wideBtn danger">Remove game</button>
+          </div>
         </div>
       </div>
-    </form>
+    </div>
   </dialog>
 
-  <dialog id="sourceDialog" class="panelDialog largeDialog">
-    <form method="dialog" class="dialogCard" id="sourceSearchForm">
-      <div class="dialogHeader"><div><span class="eyebrow">MY ABANDONWARE</span><h2>Search game catalogue</h2></div><button value="cancel" class="closeBtn">×</button></div>
-      <p id="sourceStatus" class="smallNote">My Abandonware catalogue connected.</p>
-      <label class="field">Search games<input id="sourceQuery" type="search" placeholder="e.g. Streets of Rage"></label>
-      <button type="submit" id="sourceSearchSubmit" class="wideBtn primary">Search My Abandonware</button>
-      <div id="sourceResults" class="sourceResults"></div>
+  <dialog id="sourceDialog" class="panelDialog largeDialog sourceDialog">
+    <form class="dialogCard sourcePanel" id="sourceSearchForm" autocomplete="off">
+      <div class="dialogHeader">
+        <div><span class="dialogKicker">Game catalogue</span><h2>Find a game</h2></div>
+        <button id="sourceCloseBtn" type="button" class="closeBtn" data-dialog-close aria-label="Close search">×</button>
+      </div>
+      <div class="catalogueSource"><span class="sourceLight"></span><div><strong>My Abandonware</strong><small id="sourceStatus">Catalogue ready.</small></div></div>
+      <div class="sourceSearchBar">
+        <label for="sourceQuery" class="srOnly">Search games</label>
+        <input id="sourceQuery" type="search" inputmode="search" autocomplete="off" enterkeyhint="search" placeholder="Search title, e.g. Streets of Rage">
+        <button type="submit" id="sourceSearchSubmit">Search</button>
+      </div>
+      <div id="sourceResults" class="sourceResults" aria-live="polite"></div>
       <input id="sourceRomFileInput" type="file" hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,application/octet-stream">
-      <p class="smallNote">Results stay inside Retro Deck. Choose a title, then select a ROM file you already have. Retro Deck stores it locally, identifies the system and attaches matching front-cover artwork. The app does not retrieve ROM downloads from the catalogue.</p>
+      <p class="sourceFootnote">Choose a catalogue match, then select the ROM file you already have. Retro Deck binds the title, platform and cover to your local copy.</p>
     </form>
   </dialog>
 
   <dialog id="settingsDialog" class="panelDialog largeDialog">
-    <form method="dialog" class="dialogCard">
-      <div class="dialogHeader"><div><span class="eyebrow">CUSTOMISE</span><h2>Console workshop</h2></div><button value="cancel" class="closeBtn">×</button></div>
-      <section><h3>Rendered console skins</h3><p class="smallNote">Some patterns unlock through play. Tap a skin preview to fit it to the console.</p><div id="skinGrid" class="skinGrid"></div></section>
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Preferences</span><h2>Console appearance</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
+      <section><h3>Hardware finish</h3><div id="skinGrid" class="skinGrid"></div></section>
       <section class="settingSection"><h3>Button colours</h3><div class="colourGrid">
         <label>D-pad <input id="dpadColour" type="color" value="#202226"></label>
         <label>A <input id="aColour" type="color" value="#e84b4b"></label>
@@ -201,21 +212,21 @@
         <label>Y <input id="yColour" type="color" value="#4bc27b"></label>
       </div></section>
       <section class="settingSection"><h3>Play preferences</h3>
-        <label class="switchRow"><span>Haptics where supported</span><input id="hapticsToggle" type="checkbox" checked></label>
+        <label class="switchRow"><span>Haptics</span><input id="hapticsToggle" type="checkbox" checked></label>
         <label class="switchRow"><span>Game sound</span><input id="soundToggle" type="checkbox" checked></label>
         <button id="soundTestBtn" type="button" class="wideBtn">Test sound</button>
       </section>
       <button id="resetAppearanceBtn" type="button" class="wideBtn">Reset appearance</button>
-    </form>
+    </div>
   </dialog>
 
   <dialog id="achievementsDialog" class="panelDialog largeDialog">
-    <form method="dialog" class="dialogCard"><div class="dialogHeader"><div><span class="eyebrow">PROGRESS</span><h2>Achievements & unlocks</h2></div><button value="cancel" class="closeBtn">×</button></div><div id="achievementList" class="achievementList"></div></form>
+    <div class="dialogCard"><div class="dialogHeader"><div><span class="dialogKicker">Progress</span><h2>Achievements</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div><div id="achievementList" class="achievementList"></div></div>
   </dialog>
 
   <dialog id="requestDialog" class="panelDialog">
-    <form method="dialog" class="dialogCard" id="requestForm">
-      <div class="dialogHeader"><div><span class="eyebrow">GAME REQUEST</span><h2>Add a classic to research</h2></div><button value="cancel" class="closeBtn">×</button></div>
+    <form class="dialogCard" id="requestForm">
+      <div class="dialogHeader"><div><span class="dialogKicker">Request</span><h2>Add a classic to research</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
       <label class="field">Game title<input id="requestTitle" required placeholder="e.g. Altered Beast"></label>
       <label class="field">Original platform<input id="requestPlatform" placeholder="e.g. Mega Drive"></label>
       <label class="field">What matters most<textarea id="requestNotes" rows="3" placeholder="Exact gameplay, music, a particular level..."></textarea></label>

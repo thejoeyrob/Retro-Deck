@@ -59,6 +59,28 @@
     }
     return out;
   }
+  function parseReaderMarkdown(text){
+    const out=[],seen=new Set();
+    const lines=String(text||'').split(/\r?\n/);
+    for(let i=0;i<lines.length;i++){
+      const line=lines[i];
+      const re=/\[([^\]]{2,100})\]\((https?:\/\/www\.myabandonware\.com\/game\/[^)\s]+|\/game\/[^)\s]+)\)/ig;
+      let m;
+      while((m=re.exec(line))){
+        const title=cleanTitle(m[1]).replace(/^Download\s+/i,'');
+        const pageUrl=abs(m[2]);
+        if(!title||!pageUrl||seen.has(pageUrl)||/screenshot|manual|comment|download\s+\d/i.test(title))continue;
+        const nearby=cleanTitle(lines.slice(Math.max(0,i-2),Math.min(lines.length,i+4)).join(' '));
+        const platform=platformFromText(nearby);
+        if(platform && !supported.test(platform))continue;
+        const year=(nearby.match(/\b(19\d{2}|20\d{2})\b/)||[])[1]||'';
+        seen.add(pageUrl);out.push({id:pageUrl.split('/game/')[1]?.replace(/\/$/,'')||pageUrl,title,platform,year,coverUrl:'',pageUrl,catalogOnly:true});
+        if(out.length>=30)return out;
+      }
+    }
+    return out;
+  }
+
   function seedSearch(q){
     q=String(q||'').trim().toLowerCase();
     if(!q)return[];
@@ -78,16 +100,19 @@
     const targets=[`${BASE}/search/q/${plus}`,`${BASE}/search/q/${slug}`,`${BASE}/search?q=${encodeURIComponent(raw)}`];
     let lastErr=null;
     for(const target of targets){
-      try{
-        const html=await fetchText(target,6500),items=parseSearch(html);
-        if(items.length){adapter.lastTransport='direct';return items}
-      }catch(e){lastErr=e}
-      try{
-        // Metadata-only CORS relay. It fetches the public catalogue page, not game files.
-        const relay=`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
-        const html=await fetchText(relay,8500),items=parseSearch(html);
-        if(items.length){adapter.lastTransport='metadata relay';return items}
-      }catch(e){lastErr=e}
+      const attempts=[
+        {name:'direct',url:target,reader:false,timeout:6500},
+        {name:'metadata relay',url:`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`,reader:false,timeout:8500},
+        {name:'metadata relay',url:`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,reader:false,timeout:8500},
+        {name:'reader relay',url:`https://r.jina.ai/${target}`,reader:true,timeout:9000}
+      ];
+      for(const attempt of attempts){
+        try{
+          const body=await fetchText(attempt.url,attempt.timeout);
+          const items=attempt.reader?parseReaderMarkdown(body):parseSearch(body);
+          if(items.length){adapter.lastTransport=attempt.name;return items}
+        }catch(e){lastErr=e}
+      }
     }
     if(lastErr)throw lastErr;
     return [];

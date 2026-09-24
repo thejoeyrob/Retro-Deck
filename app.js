@@ -51,6 +51,15 @@ document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 
+// Reliable dialog close behaviour on iOS/PWA. Do not depend on form method=dialog.
+document.addEventListener('click',e=>{
+  const close=e.target.closest?.('[data-dialog-close]');
+  if(!close)return;
+  e.preventDefault();e.stopPropagation();
+  close.closest('dialog')?.close?.();
+});
+document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close?.()}));
+
 const achievements={
   snake10:{title:'Snake Charmer',desc:'Reach 10 points in Snake.',reward:'Unlocks Neon Circuit skin'}
 };

@@ -1,0 +1,11 @@
+JW Retro Deck v1.5.0 — Premium UI + Control Reliability
+
+- Rebuilt library UI as a purpose-built premium game library; removed generic SaaS/dashboard hero/card styling.
+- Rebuilt game console layout with dedicated high-contrast display, tactile D-pad/action controls, and stable system rail.
+- Fixed ROM Start and Select using EmulatorJS gameManager.simulateInput with keyboard compatibility fallback.
+- Added pointer down/up handling so Start/Select preserve press and release state on touch devices.
+- Fixed game-catalogue search submit with explicit click, submit and Enter handlers.
+- Fixed search-dialog close control with explicit dialog-close handling.
+- Strengthened catalogue metadata search with multiple read-only CORS/reader fallbacks.
+- Preserved local IndexedDB ROM storage, automatic system detection, cover matching, Snake and Table Tennis.
+- Bumped PWA cache to jw-retro-deck-v1.5.0-premium-controls.

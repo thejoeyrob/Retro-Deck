@@ -231,28 +231,64 @@ function buildPlayerDocument(rec,blobUrl){
     4:{value:'up arrow',value2:'DPAD_UP'},5:{value:'down arrow',value2:'DPAD_DOWN'},6:{value:'left arrow',value2:'DPAD_LEFT'},7:{value:'right arrow',value2:'DPAD_RIGHT'},
     8:{value:'x',value2:'BUTTON_2'},9:{value:'a',value2:'BUTTON_3'},10:{value:'q',value2:'LEFT_TOP_SHOULDER'},11:{value:'e',value2:'RIGHT_TOP_SHOULDER'}
   },1:{},2:{},3:{}};
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:absolute;inset:0}</style></head><body><div id="game"></div><script>
+  const inputIndex={up:4,down:5,left:6,right:7,a:8,b:0,x:9,y:1,start:3,select:2};
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:absolute;inset:0}canvas{outline:none!important}</style></head><body tabindex="-1"><div id="game"></div><script>
   window.EJS_player='#game';
   window.EJS_core=${jsonSafe(rec.core)};
   window.EJS_gameUrl=${jsonSafe(blobUrl)};
   window.EJS_gameName=${jsonSafe(rec.title)};
   window.EJS_pathtodata=${jsonSafe(EJS_DATA)};
   window.EJS_startOnLoaded=true;
-  window.EJS_backgroundColor='#020304';
-  window.EJS_color='#f0c45a';
+  window.EJS_backgroundColor='#000000';
+  window.EJS_color='#e8b64c';
   window.EJS_browserMode='desktop';
   window.EJS_controlScheme=${jsonSafe(rec.core)};
   window.EJS_defaultControls=${jsonSafe(controls)};
   window.EJS_askBeforeExit=false;
-  window.addEventListener('message',function(ev){var d=ev.data;if(!d||d.type!=='retrodeck-key')return;var type=d.down?'keydown':'keyup';var evt=new KeyboardEvent(type,{key:d.key,code:d.code||'',bubbles:true,cancelable:true});try{Object.defineProperty(evt,'keyCode',{get:function(){return d.keyCode||0}});Object.defineProperty(evt,'which',{get:function(){return d.keyCode||0}})}catch(e){}window.dispatchEvent(evt);document.dispatchEvent(evt)});
-  window.EJS_onGameStart=function(){parent.postMessage({type:'retrodeck-emulator-started'},'*')};
+  window.__RETRO_INPUT_INDEX=${jsonSafe(inputIndex)};
+  function retroFocus(){try{window.focus();document.body.focus();var c=document.querySelector('canvas');if(c){c.tabIndex=0;c.focus({preventScroll:true})}}catch(e){}}
+  function keyboardFallback(d){
+    var type=d.down?'keydown':'keyup';
+    var init={key:d.key,code:d.code||'',bubbles:true,cancelable:true,repeat:false};
+    var evt=new KeyboardEvent(type,init);
+    try{Object.defineProperty(evt,'keyCode',{get:function(){return d.keyCode||0}});Object.defineProperty(evt,'which',{get:function(){return d.keyCode||0}})}catch(e){}
+    window.dispatchEvent(evt);document.dispatchEvent(evt);document.activeElement&&document.activeElement.dispatchEvent&&document.activeElement.dispatchEvent(new KeyboardEvent(type,init));
+  }
+  function routeRetroInput(d){
+    retroFocus();
+    var index=(typeof d.index==='number')?d.index:window.__RETRO_INPUT_INDEX[d.control];
+    var gm=window.EJS_emulator&&window.EJS_emulator.gameManager;
+    var simulated=false;
+    if(gm&&typeof gm.simulateInput==='function'&&typeof index==='number'){
+      try{gm.simulateInput(0,index,d.down?1:0);simulated=true}catch(e){}
+    }
+    // Keyboard path remains as a compatibility fallback across cores and Safari.
+    keyboardFallback(d);
+    parent.postMessage({type:'retrodeck-input-ack',control:d.control,down:d.down,simulated:simulated},'*');
+  }
+  window.addEventListener('message',function(ev){var d=ev.data;if(!d||d.type!=='retrodeck-key')return;routeRetroInput(d)});
+  window.EJS_onGameStart=function(){retroFocus();parent.postMessage({type:'retrodeck-emulator-started'},'*')};
   <\/script><script src="${EJS_DATA}loader.js"><\/script></body></html>`;
 }
 const KEYMAP={
-  up:{key:'ArrowUp',code:'ArrowUp',keyCode:38},down:{key:'ArrowDown',code:'ArrowDown',keyCode:40},left:{key:'ArrowLeft',code:'ArrowLeft',keyCode:37},right:{key:'ArrowRight',code:'ArrowRight',keyCode:39},
-  a:{key:'x',code:'KeyX',keyCode:88},b:{key:'z',code:'KeyZ',keyCode:90},x:{key:'a',code:'KeyA',keyCode:65},y:{key:'s',code:'KeyS',keyCode:83},start:{key:'Enter',code:'Enter',keyCode:13},select:{key:'v',code:'KeyV',keyCode:86}
+  up:{key:'ArrowUp',code:'ArrowUp',keyCode:38,index:4},down:{key:'ArrowDown',code:'ArrowDown',keyCode:40,index:5},left:{key:'ArrowLeft',code:'ArrowLeft',keyCode:37,index:6},right:{key:'ArrowRight',code:'ArrowRight',keyCode:39,index:7},
+  a:{key:'x',code:'KeyX',keyCode:88,index:8},b:{key:'z',code:'KeyZ',keyCode:90,index:0},x:{key:'a',code:'KeyA',keyCode:65,index:9},y:{key:'s',code:'KeyS',keyCode:83,index:1},start:{key:'Enter',code:'Enter',keyCode:13,index:3},select:{key:'v',code:'KeyV',keyCode:86,index:2}
 };
-function sendKey(k,down){if(!active||!playerFrame?.contentWindow)return false;const m=KEYMAP[k];if(!m)return false;playerFrame.contentWindow.postMessage({type:'retrodeck-key',down,...m},'*');return true}
+function sendKey(k,down){
+  if(!active||!playerFrame?.contentWindow)return false;
+  const m=KEYMAP[k];if(!m)return false;
+  // First try the exposed EmulatorJS input API directly. The iframe is srcdoc/same-origin.
+  try{
+    const w=playerFrame.contentWindow,gm=w.EJS_emulator?.gameManager;
+    w.focus?.();w.document?.querySelector?.('canvas')?.focus?.({preventScroll:true});
+    if(gm&&typeof gm.simulateInput==='function')gm.simulateInput(0,m.index,down?1:0);
+  }catch{}
+  // Also send through the frame bridge. This makes Start/Select reliable on iOS and across cores.
+  playerFrame.contentWindow.postMessage({type:'retrodeck-key',control:k,down,...m},'*');
+  return true;
+}
+function pulseKey(k,ms=140){sendKey(k,true);clearTimeout(pulseKey._t?.[k]);pulseKey._t=pulseKey._t||{};pulseKey._t[k]=setTimeout(()=>sendKey(k,false),ms)}
+function setSystemLabel(btn,label){if(!btn)return;btn.innerHTML=`<span class="systemDot"></span><strong>${esc(label)}</strong>`}
 async function playRom(rec){
   if(!rec.platform||!rec.core){notify('Choose the correct platform before playing');openDetails(rec.id);return}
   const bytes=rec.bytes;if(!bytes){notify('ROM data is missing');return}
@@ -263,14 +299,14 @@ async function playRom(rec){
   playerFrame=document.createElement('iframe');playerFrame.className='romPlayerFrame';playerFrame.allow='autoplay; fullscreen; gamepad';playerFrame.setAttribute('allowfullscreen','');playerFrame.srcdoc=buildPlayerDocument(rec,activeBlobUrl);host.appendChild(playerFrame);
   $('#gameTitle').textContent=rec.title.toUpperCase();$('#hudText').textContent=(SYSTEMS[rec.platform]?.label||'ROM').toUpperCase();$('#romExitBtn').classList.remove('hidden');
   $('#mirrorPad').classList.add('hidden');$('#actionPad').classList.remove('hidden');
-  $('#menuBtn').textContent='START';$('#pauseBtn').textContent='SELECT';
+  setSystemLabel($('#menuBtn'),'START');setSystemLabel($('#pauseBtn'),'SELECT');
   rec.lastPlayedAt=Date.now();await putRecord(rec);await reloadRecords();notify('Loading emulator…',3500)
 }
 function exitRom(){
   if(!active)return;active=false;activeId=null;
   if(playerFrame){playerFrame.remove();playerFrame=null}$('#romEmulatorHost').innerHTML='';$('#romEmulatorHost').classList.add('hidden');
   if(activeBlobUrl){URL.revokeObjectURL(activeBlobUrl);activeBlobUrl=null}
-  $('#romExitBtn').classList.add('hidden');$('#menuBtn').textContent='MENU';$('#pauseBtn').textContent='PAUSE';
+  $('#romExitBtn').classList.add('hidden');setSystemLabel($('#menuBtn'),'MENU');setSystemLabel($('#pauseBtn'),'PAUSE');
   $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#gameCanvas').classList.remove('hidden');renderRecords()
 }
 
@@ -328,17 +364,33 @@ window.RetroDeckROM={
 // Existing main-app buttons are preserved for built-ins and repurposed only while a ROM is active.
 const home=$('#homeBtn'),menu=$('#menuBtn'),pause=$('#pauseBtn');
 const oldHome=home?.onclick,oldMenu=menu?.onclick,oldPause=pause?.onclick;
-if(home)home.onclick=e=>{if(active){exitRom();return}return oldHome?.call(home,e)};
-if(menu)menu.onclick=e=>{if(active){sendKey('start',true);setTimeout(()=>sendKey('start',false),90);return}return oldMenu?.call(menu,e)};
-if(pause)pause.onclick=e=>{if(active){sendKey('select',true);setTimeout(()=>sendKey('select',false),90);return}return oldPause?.call(pause,e)};
+if(home)home.onclick=e=>{if(active){e.preventDefault();exitRom();return}return oldHome?.call(home,e)};
+function bindSystemButton(btn,key,fallback){
+  if(!btn)return;
+  let held=false;
+  btn.onclick=e=>{if(active){e.preventDefault();e.stopPropagation();return}return fallback?.call(btn,e)};
+  btn.addEventListener('pointerdown',e=>{if(!active)return;e.preventDefault();e.stopPropagation();held=true;btn.setPointerCapture?.(e.pointerId);btn.classList.add('is-down');sendKey(key,true)},{passive:false});
+  const release=e=>{if(!active||!held)return;e.preventDefault();e.stopPropagation();held=false;btn.classList.remove('is-down');sendKey(key,false)};
+  ['pointerup','pointercancel','lostpointercapture'].forEach(type=>btn.addEventListener(type,release,{passive:false}));
+  // Keyboard accessibility and a fallback for browsers that synthesize click without pointer events.
+  btn.addEventListener('keydown',e=>{if(active&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pulseKey(key)}});
+}
+bindSystemButton(menu,'start',oldMenu);
+bindSystemButton(pause,'select',oldPause);
 
 $('#romExitBtn').onclick=exitRom;
 $('#importRomBtn').onclick=()=>$('#romFileInput').click();
 $('#romFileInput').onchange=e=>importFiles([...e.target.files]);
 $('#sourceRomFileInput').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(f)importChosenSourceRom(f)};
 $('#librarySearch').addEventListener('input',renderRecords);
-$('#sourceSearchBtn').onclick=()=>{refreshSourceStatus();$('#sourceResults').innerHTML='';$('#sourceDialog').showModal();setTimeout(()=>$('#sourceQuery').focus(),120)};
-$('#sourceSearchForm').addEventListener('submit',e=>{e.preventDefault();const q=$('#sourceQuery').value.trim();if(q)sourceSearch(q)});
+$('#librarySearch').addEventListener('search',renderRecords);
+function openSourceSearch(){refreshSourceStatus();$('#sourceResults').innerHTML='';const d=$('#sourceDialog');if(!d.open)d.showModal();setTimeout(()=>$('#sourceQuery').focus({preventScroll:true}),80)}
+function runSourceSearch(){const q=$('#sourceQuery').value.trim();if(!q){$('#sourceStatus').textContent='Type a game title to search.';$('#sourceQuery').focus();return}sourceSearch(q)}
+$('#sourceSearchBtn').addEventListener('click',e=>{e.preventDefault();openSourceSearch()});
+$('#sourceSearchForm').addEventListener('submit',e=>{e.preventDefault();e.stopPropagation();runSourceSearch()});
+$('#sourceSearchSubmit').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();runSourceSearch()});
+$('#sourceQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runSourceSearch()}});
+$('#sourceCloseBtn')?.addEventListener('click',e=>{e.preventDefault();$('#sourceDialog').close()});
 window.addEventListener('retrodeck-source-changed',refreshSourceStatus);
 
 $('#saveRomMetaBtn').onclick=()=>saveDetails();
