@@ -30,23 +30,27 @@
   </header>
 
   <main id="libraryView" class="view libraryView active">
-    <section class="libraryMasthead">
-      <div class="mastheadCopy">
-        <h1>Library</h1>
-        <p>Your games, stored on this device and ready to play.</p>
+    <section class="deckHeader" aria-label="Retro Deck library controls">
+      <div class="deckTitle">
+        <h1>Retro Deck</h1>
+        <p>Your personal game collection, ready to play.</p>
       </div>
+      <nav class="deckTabs" aria-label="Library sections">
+        <button id="collectionNavBtn" class="deckTab is-active" type="button">Collection <span id="romCountNav">0</span></button>
+        <button id="discoverNavBtn" class="deckTab" type="button">Discover</button>
+      </nav>
       <div class="libraryTools">
         <label class="searchControl" for="librarySearch">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
-          <input id="librarySearch" type="search" inputmode="search" autocomplete="off" placeholder="Search library">
+          <input id="librarySearch" type="search" inputmode="search" autocomplete="off" placeholder="Filter collection">
         </label>
         <button class="toolButton" id="sourceSearchBtn" type="button"><span class="toolIcon">⌕</span><span>Find game</span></button>
-        <button class="toolButton primary" id="importRomBtn" type="button"><span class="toolIcon">＋</span><span>Import ROM</span></button>
-        <input id="romFileInput" type="file" multiple hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,application/octet-stream">
+        <button class="toolButton primary" id="importRomBtn" type="button"><span class="toolIcon">＋</span><span>Import</span></button>
+        <input id="romFileInput" type="file" multiple hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,.zip,application/zip,application/octet-stream">
       </div>
     </section>
 
-    <section class="collectionSection" aria-labelledby="myGamesHeading">
+    <section id="collectionSection" class="collectionSection" aria-labelledby="myGamesHeading">
       <div class="sectionHeading">
         <div>
           <h2 id="myGamesHeading">My Games</h2>
@@ -58,13 +62,32 @@
       <div id="romEmpty" class="romEmpty">
         <div class="emptyGlyph">▣</div>
         <strong>Your collection is empty</strong>
-        <span>Import a ROM you own, or use Find game to match a title before adding it.</span>
+        <span>Use Find game for catalogue search, or import a game file already on this device.</span>
       </div>
+      <div class="collectionFooter"><button id="showMoreGamesBtn" class="showMoreBtn hidden" type="button">Show more</button><span id="collectionMatchStatus"></span></div>
     </section>
 
-    <section class="collectionSection builtInSection" aria-labelledby="builtInHeading">
+    <section id="discoverSection" class="discoverSection hidden" aria-labelledby="discoverHeading">
+      <div class="discoverHead">
+        <div>
+          <h2 id="discoverHeading">Find a game</h2>
+          <p>Search My Abandonware. Results stay here in Retro Deck.</p>
+        </div>
+        <span class="sourceState"><span class="sourceLight"></span><span id="sourceStatus">Catalogue ready</span></span>
+      </div>
+      <form id="sourceSearchForm" class="discoverSearch" autocomplete="off">
+        <label for="sourceQuery" class="srOnly">Search games</label>
+        <input id="sourceQuery" type="search" inputmode="search" autocomplete="off" enterkeyhint="search" placeholder="Search title, e.g. Streets of Rage">
+        <button type="submit" id="sourceSearchSubmit">Search</button>
+      </form>
+      <div id="sourceResults" class="sourceResults discoveryGrid" aria-live="polite"></div>
+      <input id="sourceRomFileInput" type="file" hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,.zip,application/zip,application/octet-stream">
+      <p class="sourceFootnote" id="cloudSourceNote">One-tap cloud import is used when the Retro Deck Supabase service is connected. Local import remains available as a fallback.</p>
+    </section>
+
+    <section id="builtInSection" class="collectionSection builtInSection" aria-labelledby="builtInHeading">
       <div class="sectionHeading">
-        <div><h2 id="builtInHeading">Retro Deck Originals</h2><p>Two instant-play games included with the app.</p></div>
+        <div><h2 id="builtInHeading">Retro Deck Originals</h2><p>Instant-play games included with the app.</p></div>
       </div>
       <section id="gameGrid" class="gameGrid quickShelf" aria-label="Built-in games"></section>
     </section>
@@ -173,31 +196,13 @@
           <div id="romHashLine" class="romHashLine"></div>
           <div class="dialogActions">
             <button type="button" id="playRomBtn" class="wideBtn primary">Play</button>
-            <button type="button" id="refreshCoverBtn" class="wideBtn">Find cover again</button>
+            <button type="button" id="refreshCoverBtn" class="wideBtn">Find artwork</button>
             <button type="button" id="saveRomMetaBtn" class="wideBtn">Save details</button>
             <button type="button" id="deleteRomBtn" class="wideBtn danger">Remove game</button>
           </div>
         </div>
       </div>
     </div>
-  </dialog>
-
-  <dialog id="sourceDialog" class="panelDialog largeDialog sourceDialog">
-    <form class="dialogCard sourcePanel" id="sourceSearchForm" autocomplete="off">
-      <div class="dialogHeader">
-        <div><span class="dialogKicker">Game catalogue</span><h2>Find a game</h2></div>
-        <button id="sourceCloseBtn" type="button" class="closeBtn" data-dialog-close aria-label="Close search">×</button>
-      </div>
-      <div class="catalogueSource"><span class="sourceLight"></span><div><strong>My Abandonware</strong><small id="sourceStatus">Catalogue ready.</small></div></div>
-      <div class="sourceSearchBar">
-        <label for="sourceQuery" class="srOnly">Search games</label>
-        <input id="sourceQuery" type="search" inputmode="search" autocomplete="off" enterkeyhint="search" placeholder="Search title, e.g. Streets of Rage">
-        <button type="submit" id="sourceSearchSubmit">Search</button>
-      </div>
-      <div id="sourceResults" class="sourceResults" aria-live="polite"></div>
-      <input id="sourceRomFileInput" type="file" hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,application/octet-stream">
-      <p class="sourceFootnote">Choose a catalogue match, then select the ROM file you already have. Retro Deck binds the title, platform and cover to your local copy.</p>
-    </form>
   </dialog>
 
   <dialog id="settingsDialog" class="panelDialog largeDialog">
@@ -237,6 +242,8 @@
   </dialog>
 </div>
 <script src="./app.js"></script>
+<script src="./retrodeck-config.js"></script>
+<script src="./retrodeck-cloud.js"></script>
 <script src="./rom-source.js"></script>
 <script src="./rom-library.js"></script>
 </body>

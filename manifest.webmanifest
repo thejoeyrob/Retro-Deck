@@ -1,7 +1,7 @@
 {
   "name": "JW Retro Deck",
   "short_name": "Retro Deck",
-  "description": "JW Retro Deck: a personal multi-system ROM library with adaptive browser emulation, stored cover art, and built-in Snake and Table Tennis.",
+  "description": "JW Retro Deck: a premium personal game collection with same-page discovery, automatic artwork matching, local ROM storage and adaptive browser emulation.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

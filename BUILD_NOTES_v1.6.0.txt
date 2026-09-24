@@ -1,0 +1,27 @@
+JW Retro Deck v1.6.0 — Premium Library + Same-Page Discovery
+
+FUNCTIONAL FIXES
+- Fixed keyboard search/input so global game-control shortcuts no longer swallow normal letters while typing.
+- Reworked catalogue parsing with title relevance scoring/filtering; unrelated page links/popular-game blocks are excluded from search results.
+- Replaced the catalogue modal flow with an inline Discover view on the library page.
+- Added an explicit Collection tab and count so a manually imported collection is always directly accessible.
+- Added reactive collection filtering: results update as the user types without navigating away.
+- Added Show More pagination in 15-game increments (five rows at three columns).
+- Added Find Artwork action and automatic artwork fallback: Libretro box art first, Wikipedia page image second.
+- Preserved original cover proportions; square artwork sits in a portrait case slot with a generated textured/blurred fill behind it.
+
+VISUAL UPGRADE
+- Rebuilt the library around a purpose-built premium gaming surface: hard rails, material depth, compact controls and case-art-first hierarchy.
+- Removed the old search-dialog presentation from the catalogue workflow.
+- Standardised a three-column cover shelf on phone/tablet layouts.
+- Refined the console hardware treatment while preserving existing gameplay/control functionality.
+
+CLOUD-READY IMPORT
+- Added `retrodeck-config.js` and `retrodeck-cloud.js`.
+- Added a Supabase Edge Function implementation in `SUPABASE_EDGE_FUNCTION_RETRODECK.ts`.
+- Cloud search/ingest uses an authenticated user session, server-side source lookup, private Supabase Storage and short-lived signed download URLs.
+- If no dedicated Retro Deck Supabase endpoint is configured, the PWA remains usable and automatically falls back to selecting a local game file after a catalogue match.
+
+PWA
+- Cache bumped to `jw-retro-deck-v1.6.0-premium-library-discovery`.
+- New cloud/config scripts added to the offline application shell.

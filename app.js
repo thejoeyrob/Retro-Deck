@@ -30,13 +30,22 @@ function routeControl(k,v){
   }
   input.set(k,v);
 }
+function isTypingTarget(target){
+  return !!target?.closest?.('input,textarea,select,[contenteditable=\"true\"]');
+}
 addEventListener('keydown',e=>{
+  // Never steal normal letters from search fields/forms. Game hotkeys only apply
+  // when the user is not actively typing into an editable control.
+  if(isTypingTarget(e.target))return;
   audio.unlock();
   if(e.code==='KeyP'){togglePause();e.preventDefault();return}
   if(e.code==='Escape'&&(currentGame||originalMode)){openMenu();e.preventDefault();return}
   const k=keyMap[e.code];if(k){routeControl(k,true);e.preventDefault()}
 });
-addEventListener('keyup',e=>{const k=keyMap[e.code];if(k){routeControl(k,false);e.preventDefault()}});
+addEventListener('keyup',e=>{
+  if(isTypingTarget(e.target))return;
+  const k=keyMap[e.code];if(k){routeControl(k,false);e.preventDefault()}
+});
 document.querySelectorAll('[data-key]').forEach(btn=>{
   const k=btn.dataset.key;
   const on=e=>{e.preventDefault();e.stopPropagation();audio.unlock();btn.setPointerCapture?.(e.pointerId);routeControl(k,true);btn.classList.add('pressed');buzz(8)};

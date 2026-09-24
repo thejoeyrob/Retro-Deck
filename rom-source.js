@@ -1,15 +1,11 @@
 /*
-  JW Retro Deck v1.4 - My Abandonware catalogue adapter
+  JW Retro Deck v1.6 - My Abandonware browser fallback adapter
 
-  This adapter uses My Abandonware as a title/platform catalogue only.
-  It never fetches or exposes ROM download URLs. Selecting a catalogue
-  result asks the player to choose a ROM file they already have; Retro Deck
-  then stores it locally in IndexedDB and matches cover art separately.
-
-  A flat PWA cannot bypass a third-party site's CORS policy. We therefore
-  attempt a direct, read-only catalogue fetch. If the site blocks browser
-  cross-origin requests, the app reports that cleanly and retains local ROM
-  import. A small metadata seed keeps the source UI demonstrable offline.
+  Used only when the dedicated Retro Deck Supabase cloud service is not
+  configured. This flat-PWA fallback searches title/platform metadata and
+  then asks the player to choose a local game file. The cloud path handles
+  authenticated server-side catalogue lookup/import. A small metadata seed
+  keeps exact-title discovery useful when browser CORS blocks the live site.
 */
 (()=>{
   'use strict';
@@ -81,10 +77,25 @@
     return out;
   }
 
+
+  function normalized(s=''){return String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,' ').trim()}
+  function relevantResults(items,query){
+    const q=normalized(query),tokens=q.split(/\s+/).filter(Boolean);
+    if(!q||!tokens.length)return items;
+    return items.map(item=>{
+      const title=normalized(item.title||''),hay=normalized(`${item.title||''} ${item.platform||''} ${item.year||''}`);
+      const titleHits=tokens.filter(t=>title.includes(t)).length;
+      const anyHits=tokens.filter(t=>hay.includes(t)).length;
+      const phrase=title.includes(q)?8:0;
+      const prefix=title.startsWith(q)?3:0;
+      return {item,score:phrase+prefix+titleHits*3+anyHits};
+    }).filter(x=>x.score>=Math.max(3,tokens.length*3)).sort((a,b)=>b.score-a.score).map(x=>x.item);
+  }
+
   function seedSearch(q){
     q=String(q||'').trim().toLowerCase();
     if(!q)return[];
-    return SEED.filter(x=>`${x.title} ${x.platform} ${x.year}`.toLowerCase().includes(q)).map(x=>({...x,catalogOnly:true,offlineSeed:true}));
+    return relevantResults(SEED.map(x=>({...x,catalogOnly:true,offlineSeed:true})),q);
   }
   async function fetchText(url,ms=8000){
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),ms);
@@ -109,7 +120,8 @@
       for(const attempt of attempts){
         try{
           const body=await fetchText(attempt.url,attempt.timeout);
-          const items=attempt.reader?parseReaderMarkdown(body):parseSearch(body);
+          const parsed=attempt.reader?parseReaderMarkdown(body):parseSearch(body);
+          const items=relevantResults(parsed,raw);
           if(items.length){adapter.lastTransport=attempt.name;return items}
         }catch(e){lastErr=e}
       }
