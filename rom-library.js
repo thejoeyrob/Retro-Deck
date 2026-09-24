@@ -9,16 +9,16 @@ const EJS_DATA='https://cdn.emulatorjs.org/stable/data/';
 const MAX_SINGLE_ROM=512*1024*1024;
 
 const SYSTEMS={
-  atari2600:{label:'Atari 2600',core:'atari2600',ext:['a26'],repo:'Atari_-_2600'},
-  nes:{label:'Nintendo NES',core:'nes',ext:['nes','unf','unif'],repo:'Nintendo_-_Nintendo_Entertainment_System'},
-  snes:{label:'Super Nintendo / SNES',core:'snes',ext:['sfc','smc','fig','swc','gd3','gd7','dx2','bsx'],repo:'Nintendo_-_Super_Nintendo_Entertainment_System'},
-  gb:{label:'Nintendo Game Boy',core:'gb',ext:['gb'],repo:'Nintendo_-_Game_Boy'},
-  gbc:{label:'Nintendo Game Boy Color',core:'gb',ext:['gbc'],repo:'Nintendo_-_Game_Boy_Color'},
-  gba:{label:'Nintendo Game Boy Advance',core:'gba',ext:['gba'],repo:'Nintendo_-_Game_Boy_Advance'},
-  segaMD:{label:'Sega Mega Drive / Genesis',core:'segaMD',ext:['md','gen','smd','68k','sgd'],repo:'Sega_-_Mega_Drive_-_Genesis'},
-  segaMS:{label:'Sega Master System',core:'segaMS',ext:['sms'],repo:'Sega_-_Master_System_-_Mark_III'},
-  segaGG:{label:'Sega Game Gear',core:'segaGG',ext:['gg'],repo:'Sega_-_Game_Gear'},
-  n64:{label:'Nintendo 64',core:'n64',ext:['z64','n64','v64'],repo:'Nintendo_-_Nintendo_64'}
+  atari2600:{label:'Atari 2600',core:'atari2600',ext:['a26'],repo:'Atari_-_2600',aspect:4/3},
+  nes:{label:'Nintendo NES',core:'nes',ext:['nes','unf','unif'],repo:'Nintendo_-_Nintendo_Entertainment_System',aspect:4/3},
+  snes:{label:'Super Nintendo / SNES',core:'snes',ext:['sfc','smc','fig','swc','gd3','gd7','dx2','bsx'],repo:'Nintendo_-_Super_Nintendo_Entertainment_System',aspect:4/3},
+  gb:{label:'Nintendo Game Boy',core:'gb',ext:['gb'],repo:'Nintendo_-_Game_Boy',aspect:10/9},
+  gbc:{label:'Nintendo Game Boy Color',core:'gb',ext:['gbc'],repo:'Nintendo_-_Game_Boy_Color',aspect:10/9},
+  gba:{label:'Nintendo Game Boy Advance',core:'gba',ext:['gba'],repo:'Nintendo_-_Game_Boy_Advance',aspect:3/2},
+  segaMD:{label:'Sega Mega Drive / Genesis',core:'segaMD',ext:['md','gen','smd','68k','sgd'],repo:'Sega_-_Mega_Drive_-_Genesis',aspect:4/3},
+  segaMS:{label:'Sega Master System',core:'segaMS',ext:['sms'],repo:'Sega_-_Master_System_-_Mark_III',aspect:4/3},
+  segaGG:{label:'Sega Game Gear',core:'segaGG',ext:['gg'],repo:'Sega_-_Game_Gear',aspect:10/9},
+  n64:{label:'Nintendo 64',core:'n64',ext:['z64','n64','v64'],repo:'Nintendo_-_Nintendo_64',aspect:4/3}
 };
 
 let records=[];
@@ -256,10 +256,12 @@ function buildPlayerDocument(rec,blobUrl){
   const controls={0:{
     0:{value:'z',value2:'BUTTON_1'},1:{value:'s',value2:'BUTTON_4'},2:{value:'v',value2:'SELECT'},3:{value:'enter',value2:'START'},
     4:{value:'up arrow',value2:'DPAD_UP'},5:{value:'down arrow',value2:'DPAD_DOWN'},6:{value:'left arrow',value2:'DPAD_LEFT'},7:{value:'right arrow',value2:'DPAD_RIGHT'},
-    8:{value:'x',value2:'BUTTON_2'},9:{value:'a',value2:'BUTTON_3'},10:{value:'q',value2:'LEFT_TOP_SHOULDER'},11:{value:'e',value2:'RIGHT_TOP_SHOULDER'}
+    8:{value:'x',value2:'BUTTON_2'},9:{value:'a',value2:'BUTTON_3'},10:{value:'q',value2:'LEFT_TOP_SHOULDER'},11:{value:'e',value2:'RIGHT_TOP_SHOULDER'},
+    12:{value:'1',value2:'LEFT_BOTTOM_SHOULDER'},13:{value:'3',value2:'RIGHT_BOTTOM_SHOULDER'}
   },1:{},2:{},3:{}};
-  const inputIndex={up:4,down:5,left:6,right:7,a:8,b:0,x:9,y:1,start:3,select:2};
+  const inputIndex={up:4,down:5,left:6,right:7,a:8,b:0,x:9,y:1,start:3,select:2,l1:10,r1:11,l2:12,r2:13};
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:absolute;inset:0}canvas{outline:none!important}</style></head><body tabindex="-1"><div id="game"></div><script>
+  try{Object.defineProperty(navigator,'getGamepads',{configurable:true,value:function(){return []}})}catch(e){}
   window.EJS_player='#game';
   window.EJS_core=${jsonSafe(rec.core)};
   window.EJS_gameUrl=${jsonSafe(blobUrl)};
@@ -299,7 +301,8 @@ function buildPlayerDocument(rec,blobUrl){
 }
 const KEYMAP={
   up:{key:'ArrowUp',code:'ArrowUp',keyCode:38,index:4},down:{key:'ArrowDown',code:'ArrowDown',keyCode:40,index:5},left:{key:'ArrowLeft',code:'ArrowLeft',keyCode:37,index:6},right:{key:'ArrowRight',code:'ArrowRight',keyCode:39,index:7},
-  a:{key:'x',code:'KeyX',keyCode:88,index:8},b:{key:'z',code:'KeyZ',keyCode:90,index:0},x:{key:'a',code:'KeyA',keyCode:65,index:9},y:{key:'s',code:'KeyS',keyCode:83,index:1},start:{key:'Enter',code:'Enter',keyCode:13,index:3},select:{key:'v',code:'KeyV',keyCode:86,index:2}
+  a:{key:'x',code:'KeyX',keyCode:88,index:8},b:{key:'z',code:'KeyZ',keyCode:90,index:0},x:{key:'a',code:'KeyA',keyCode:65,index:9},y:{key:'s',code:'KeyS',keyCode:83,index:1},start:{key:'Enter',code:'Enter',keyCode:13,index:3},select:{key:'v',code:'KeyV',keyCode:86,index:2},
+  l1:{key:'q',code:'KeyQ',keyCode:81,index:10},r1:{key:'e',code:'KeyE',keyCode:69,index:11},l2:{key:'1',code:'Digit1',keyCode:49,index:12},r2:{key:'3',code:'Digit3',keyCode:51,index:13}
 };
 function sendKey(k,down){
   if(!active||!playerFrame?.contentWindow)return false;
@@ -322,18 +325,20 @@ async function playRom(rec){
   if(active)exitRom();
   active=true;activeId=rec.id;activeBlobUrl=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
   $('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');$('#gameCanvas').classList.add('hidden');$('#javatari-screen').classList.add('hidden');
+  window.RetroDeckApp?.setGameAspect?.(SYSTEMS[rec.platform]?.aspect||4/3);
   const host=$('#romEmulatorHost');host.classList.remove('hidden');host.innerHTML='';
   playerFrame=document.createElement('iframe');playerFrame.className='romPlayerFrame';playerFrame.allow='autoplay; fullscreen; gamepad';playerFrame.setAttribute('allowfullscreen','');playerFrame.srcdoc=buildPlayerDocument(rec,activeBlobUrl);host.appendChild(playerFrame);
   $('#gameTitle').textContent=rec.title.toUpperCase();$('#hudText').textContent=(SYSTEMS[rec.platform]?.label||'ROM').toUpperCase();$('#romExitBtn').classList.remove('hidden');
   $('#mirrorPad').classList.add('hidden');$('#actionPad').classList.remove('hidden');
   setSystemLabel($('#menuBtn'),'START');setSystemLabel($('#pauseBtn'),'SELECT');
-  rec.lastPlayedAt=Date.now();await putRecord(rec);await reloadRecords();notify('Loading emulator…',3500)
+  rec.lastPlayedAt=Date.now();await putRecord(rec);await reloadRecords();window.RetroDeckApp?.syncControllerDisplay?.();notify('Loading emulator…',3500)
 }
 function exitRom(){
   if(!active)return;active=false;activeId=null;
   if(playerFrame){playerFrame.remove();playerFrame=null}$('#romEmulatorHost').innerHTML='';$('#romEmulatorHost').classList.add('hidden');
   if(activeBlobUrl){URL.revokeObjectURL(activeBlobUrl);activeBlobUrl=null}
   $('#romExitBtn').classList.add('hidden');setSystemLabel($('#menuBtn'),'MENU');setSystemLabel($('#pauseBtn'),'PAUSE');
+  window.RetroDeckApp?.setControllerDisplay?.(false,{quiet:true});
   $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#gameCanvas').classList.remove('hidden');renderRecords()
 }
 
@@ -412,6 +417,7 @@ function refreshSourceStatus(){
 window.RetroDeckROM={
   get active(){return active},
   routeControl(k,v){return sendKey(k,v)},
+  exit:exitRom,
   registerSource(adapter){window.registerRetroDeckRomSource?.(adapter)},
   reload:reloadRecords
 };

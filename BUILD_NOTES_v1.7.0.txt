@@ -1,0 +1,42 @@
+JW RETRO DECK v1.7.0 — CONSOLE-CLASS UI + CONTROLLER MODE
+============================================================
+
+Visual system
+- Rebuilt the home/library surface into a contemporary console interface with an intentional retro hardware skin.
+- Replaced the document/dashboard feel with condensed display typography, hard rails, angled hardware cuts, material depth and console-style navigation.
+- Collection and discovery remain same-screen workflows.
+- Game library remains three covers wide, with 15-title paging and live filtering.
+- Existing local ROM library, discovery, cover-art and emulator functions are preserved.
+
+Bluetooth / USB gamepad support
+- Added browser Gamepad API detection for compatible Bluetooth and wired controllers.
+- Standard controllers auto-map D-pad, face buttons, shoulders, triggers, Start and Select.
+- Left analog stick can mirror D-pad and can be toggled off.
+- Manual command mapping supports each gameplay command and the Retro Deck game menu.
+- Adjust flow: press Adjust > press desired controller button > release > press the same button again to confirm.
+- Mappings persist in localStorage and can be saved/reset from Controller Setup.
+- Duplicate assignments are removed automatically so one physical button cannot accidentally fire two commands.
+
+Controller display mode
+- When a controller is active, Retro Deck can automatically remove the virtual console hardware and maximise the game image.
+- Default exit gesture is triple-press R3. It is user-assignable and reserved from gameplay while controller display is active.
+- Triple-exit restores touch controls without stopping or restarting the game.
+- Rotation no longer blocks or pauses gameplay.
+- Fullscreen game canvas maintains the platform's intended aspect ratio; no stretching.
+- Common platform aspect presets are applied for Atari 2600, NES, SNES, GB/GBC, GBA, Mega Drive, Master System, Game Gear and N64.
+- If browser fullscreen is available during an eligible user gesture, Retro Deck requests it; installed PWA mode still uses the full app viewport when native fullscreen APIs are restricted.
+
+Touch console layout
+- Portrait: game screen above, large D-pad and action controls below.
+- Landscape: game screen centred with controls split left/right.
+- Screen fitting prioritises playable area but preserves control hit size and prevents overlap.
+- Hardware frame remains in touch mode only.
+
+Input robustness
+- Emulator iframe receives Retro Deck-routed controller commands for deterministic custom mappings.
+- L1/R1/L2/R2 routes were added for supported emulator cores.
+- Existing text/search keyboard input protection is retained.
+
+PWA
+- Cache bumped to v1.7.0 so deployed clients receive the new shell rather than stale v1.6 UI.
+- Root-flat GitHub/PWA structure preserved.

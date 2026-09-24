@@ -12,7 +12,10 @@ const store={
   load(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},
   save(k,v){localStorage.setItem(k,JSON.stringify(v))}
 };
-let prefs=store.load('jwrd.prefs',{skin:'classic',haptics:true,sound:true,buttons:{dpad:'#202226',a:'#e84b4b',b:'#f2cc40',x:'#4c83f1',y:'#4bc27b'}});
+const DEFAULT_CONTROLLER_MAP={up:12,down:13,left:14,right:15,a:0,b:1,x:2,y:3,l1:4,r1:5,l2:6,r2:7,select:8,start:9,menu:10,exit:11};
+const DEFAULT_PREFS={skin:'classic',haptics:true,sound:true,buttons:{dpad:'#202226',a:'#e84b4b',b:'#f2cc40',x:'#4c83f1',y:'#4bc27b'},controller:{autoDisplay:true,leftStick:true,map:{...DEFAULT_CONTROLLER_MAP}}};
+const loadedPrefs=store.load('jwrd.prefs',{});
+let prefs={...DEFAULT_PREFS,...loadedPrefs,buttons:{...DEFAULT_PREFS.buttons,...(loadedPrefs.buttons||{})},controller:{...DEFAULT_PREFS.controller,...(loadedPrefs.controller||{}),map:{...DEFAULT_CONTROLLER_MAP,...(loadedPrefs.controller?.map||{})}}};
 let stats=store.load('jwrd.stats',{played:[],achievements:{},high:{},requests:[]});
 function saveAll(){store.save('jwrd.prefs',prefs);store.save('jwrd.stats',stats)}
 function buzz(ms=12){if(prefs.haptics&&navigator.vibrate)navigator.vibrate(ms)}
@@ -96,7 +99,150 @@ function renderSkins(){const el=$('#skinGrid');el.innerHTML='';skins.forEach(s=>
 function renderAchievements(){const el=$('#achievementList');el.innerHTML='';Object.entries(achievements).forEach(([id,a])=>{const ok=!!stats.achievements[id];const d=document.createElement('div');d.className=`achievement ${ok?'':'locked'}`;d.innerHTML=`<div class="medal">${ok?'★':'○'}</div><div><strong>${a.title}</strong><small>${a.desc}<br>${a.reward}</small></div>`;el.appendChild(d)})}
 ['dpad','a','b','x','y'].forEach(k=>{$(`#${k}Colour`).addEventListener('input',e=>{prefs.buttons[k]=e.target.value;saveAll();applyPrefs()})});
 $('#hapticsToggle').onchange=e=>{prefs.haptics=e.target.checked;saveAll()};$('#soundToggle').onchange=e=>{prefs.sound=e.target.checked;saveAll();if(!prefs.sound)audio.stop();else audio.test()};
-$('#resetAppearanceBtn').onclick=()=>{prefs={skin:'classic',haptics:true,sound:true,buttons:{dpad:'#202226',a:'#e84b4b',b:'#f2cc40',x:'#4c83f1',y:'#4bc27b'}};saveAll();applyPrefs();renderSkins()};
+$('#resetAppearanceBtn').onclick=()=>{prefs={...DEFAULT_PREFS,buttons:{...DEFAULT_PREFS.buttons},controller:{...DEFAULT_PREFS.controller,map:{...DEFAULT_CONTROLLER_MAP}}};saveAll();applyPrefs();renderSkins();renderControllerSettings?.()};
+
+
+// ------------------------------------------------------------
+// Retro Deck controller system — standard Gamepad API + manual map.
+// ------------------------------------------------------------
+const CONTROLLER_COMMANDS=[
+  ['up','UP'],['down','DOWN'],['left','LEFT'],['right','RIGHT'],
+  ['a','A / PRIMARY'],['b','B / SECONDARY'],['x','X'],['y','Y'],
+  ['l1','L1 / LB'],['r1','R1 / RB'],['l2','L2 / LT'],['r2','R2 / RT'],
+  ['select','SELECT / VIEW'],['start','START / MENU'],['menu','RETRO DECK MENU']
+];
+const BUTTON_NAMES={0:'A',1:'B',2:'X',3:'Y',4:'L1 / LB',5:'R1 / RB',6:'L2 / LT',7:'R2 / RT',8:'SELECT / VIEW',9:'START / MENU',10:'L3',11:'R3',12:'D-PAD UP',13:'D-PAD DOWN',14:'D-PAD LEFT',15:'D-PAD RIGHT',16:'HOME'};
+const controllerRuntime={pad:null,index:null,prev:[],axes:{left:false,right:false,up:false,down:false},mapping:null,controllerMode:false,sessionTouchOverride:false,wasGameVisible:false,lastExitPresses:[],hintTimer:null,raf:0};
+function gamepadButtonName(i){return BUTTON_NAMES[i]||`BUTTON ${Number(i)+1}`}
+function controllerAvailable(){return !!controllerRuntime.pad}
+function isGameVisible(){return $('#consoleView')?.classList.contains('active')}
+function setGameAspect(ratio=16/9){
+  const n=Number(ratio);const safe=Number.isFinite(n)&&n>.5&&n<3?n:16/9;
+  document.documentElement.style.setProperty('--game-aspect',String(safe));refreshScreenFit();
+}
+function refreshScreenFit(){
+  const shell=$('#consoleShell');if(!shell)return;
+  shell.style.setProperty('--viewport-w',`${innerWidth}px`);shell.style.setProperty('--viewport-h',`${innerHeight}px`);
+}
+function controllerExitLabel(){return `${gamepadButtonName(prefs.controller.map.exit)} · triple press`}
+function setControllerDisplay(on,{quiet=false}={}){
+  on=!!on&&isGameVisible()&&controllerAvailable();
+  if(on){
+    const exitIndex=Number(prefs.controller.map.exit);
+    if(!Number.isInteger(exitIndex)||exitIndex<0||exitIndex>=controllerRuntime.pad.buttons.length){
+      if(!quiet)toast('Set an exit gesture before controller display',2400);openControllerSettings();return false;
+    }
+  }
+  controllerRuntime.controllerMode=on;
+  if(on&&document.fullscreenEnabled&&!document.fullscreenElement&&navigator.userActivation?.isActive){document.documentElement.requestFullscreen?.({navigationUI:'hide'}).catch?.(()=>{})}
+  $('#app').classList.toggle('controller-mode',on);
+  const hint=$('#controllerModeHint');
+  if(hint){hint.classList.toggle('hidden',!on);$('#controllerExitHint').textContent=`Triple-press ${gamepadButtonName(prefs.controller.map.exit)} to restore touch controls`;clearTimeout(controllerRuntime.hintTimer);if(on)controllerRuntime.hintTimer=setTimeout(()=>hint.classList.add('is-faded'),5200);else hint.classList.remove('is-faded')}
+  refreshScreenFit();
+  if(!on&&document.fullscreenElement){document.exitFullscreen?.().catch?.(()=>{})}
+  if(on&&!quiet)toast('Controller display active',1300);
+  return true;
+}
+function syncControllerDisplay(){
+  if(!isGameVisible()){if(controllerRuntime.controllerMode)setControllerDisplay(false,{quiet:true});return}
+  if(controllerAvailable()&&prefs.controller.autoDisplay&&!controllerRuntime.sessionTouchOverride&&!controllerRuntime.controllerMode)setControllerDisplay(true,{quiet:true});
+}
+function setControllerStatus(pad){
+  controllerRuntime.pad=pad||null;controllerRuntime.index=pad?.index??null;
+  $('#controllerDot')?.classList.toggle('is-connected',!!pad);$('#controllerStatusLight')?.classList.toggle('is-connected',!!pad);
+  if($('#controllerStatusText'))$('#controllerStatusText').textContent=pad?'Controller connected':'Waiting for controller';
+  if($('#controllerNameText'))$('#controllerNameText').textContent=pad?(pad.id||'Gamepad'):'Pair it in your device Bluetooth settings, then press any controller button.';
+  if($('#deckReadyText'))$('#deckReadyText').textContent=pad?'PAD ONLINE':'READY';
+  if(!pad&&controllerRuntime.controllerMode){setControllerDisplay(false,{quiet:true});toast('Controller disconnected · touch controls restored',2200)}
+  renderControllerSettings();
+}
+function firstConnectedPad(){const pads=navigator.getGamepads?.()||[];for(const p of pads)if(p?.connected)return p;return null}
+function openControllerSettings(){renderControllerSettings();$('#controllerDialog')?.showModal?.()}
+function renderControllerSettings(){
+  const list=$('#controllerMappingList');if(!list)return;
+  $('#controllerAutoToggle').checked=!!prefs.controller.autoDisplay;$('#controllerStickToggle').checked=!!prefs.controller.leftStick;
+  $('#exitGestureLabel').textContent=controllerExitLabel();
+  list.innerHTML='';
+  for(const [cmd,label] of CONTROLLER_COMMANDS){
+    const row=document.createElement('div');row.className='controllerMapRow';row.dataset.command=cmd;
+    const value=prefs.controller.map[cmd];row.innerHTML=`<div class="mapCommand"><strong>${label}</strong><small>${cmd==='menu'?'Opens the in-game Retro Deck menu':''}</small></div><span class="mapValue">${Number.isInteger(value)?gamepadButtonName(value):'NOT ASSIGNED'}</span><button type="button" class="mapAdjustBtn" data-map-command="${cmd}">Adjust</button>`;
+    list.appendChild(row)
+  }
+  list.querySelectorAll('[data-map-command]').forEach(b=>b.onclick=()=>beginControllerMapping(b.dataset.mapCommand));
+  $('#mappingStateText').textContent=controllerRuntime.mapping?'LISTENING':(controllerAvailable()?'CONNECTED':'AUTO');
+}
+function mappingLabel(cmd){if(cmd==='exit')return'EXIT CONTROLLER DISPLAY';return CONTROLLER_COMMANDS.find(x=>x[0]===cmd)?.[1]||cmd.toUpperCase()}
+function beginControllerMapping(command){
+  if(!controllerAvailable()){toast('Connect a controller and press any button first',2200);return}
+  controllerRuntime.mapping={command,candidate:null,waitingRelease:false};
+  const prompt=$('#mappingPrompt');prompt.classList.remove('hidden');prompt.innerHTML=`<strong>ADJUST ${mappingLabel(command)}</strong><span>Press the controller button you want to use.</span>`;
+  $('#mappingStateText').textContent='LISTENING';
+}
+function cancelControllerMapping(){controllerRuntime.mapping=null;$('#mappingPrompt')?.classList.add('hidden');renderControllerSettings()}
+function handleMappingPress(index){
+  const m=controllerRuntime.mapping;if(!m)return false;
+  const prompt=$('#mappingPrompt');
+  if(m.candidate==null||m.candidate!==index){m.candidate=index;m.waitingRelease=true;prompt.innerHTML=`<strong>${gamepadButtonName(index)}</strong><span>Release it, then press the same button again to confirm ${mappingLabel(m.command)}.</span>`;return true}
+  if(m.waitingRelease)return true;
+  for(const key of Object.keys(prefs.controller.map))if(key!==m.command&&Number(prefs.controller.map[key])===index)prefs.controller.map[key]=null;
+  prefs.controller.map[m.command]=index;saveAll();
+  prompt.innerHTML=`<strong>SAVED</strong><span>${mappingLabel(m.command)} → ${gamepadButtonName(index)}</span>`;
+  controllerRuntime.mapping=null;setTimeout(()=>{prompt.classList.add('hidden');renderControllerSettings()},520);return true
+}
+function handleMappingRelease(index){const m=controllerRuntime.mapping;if(m&&m.candidate===index)m.waitingRelease=false}
+function openControllerGameMenu(){
+  if(!isGameVisible())return;
+  $('#controllerGameDialog')?.showModal?.();
+}
+function handleExitGesturePress(index){
+  if(!controllerRuntime.controllerMode||index!==Number(prefs.controller.map.exit))return false;
+  const now=performance.now();controllerRuntime.lastExitPresses=controllerRuntime.lastExitPresses.filter(t=>now-t<950);controllerRuntime.lastExitPresses.push(now);
+  if(controllerRuntime.lastExitPresses.length>=3){controllerRuntime.lastExitPresses=[];controllerRuntime.sessionTouchOverride=true;setControllerDisplay(false);return true}
+  return true; // reserved button: do not pass native input while controller display is active
+}
+function dispatchControllerCommand(command,down){
+  if(command==='menu'){if(down)openControllerGameMenu();return}
+  routeControl(command,down);
+}
+function pollControllers(){
+  const visible=isGameVisible();if(visible&&!controllerRuntime.wasGameVisible)controllerRuntime.sessionTouchOverride=false;controllerRuntime.wasGameVisible=visible;
+  const pad=firstConnectedPad();
+  if((pad?.index??null)!==controllerRuntime.index)setControllerStatus(pad);
+  else if(pad)controllerRuntime.pad=pad;
+  if(pad){
+    const prev=controllerRuntime.prev;
+    for(let i=0;i<pad.buttons.length;i++){
+      const down=!!pad.buttons[i]?.pressed;const was=!!prev[i];
+      if(down!==was){
+        if(controllerRuntime.mapping){if(down)handleMappingPress(i);else handleMappingRelease(i)}
+        else if(down&&handleExitGesturePress(i)){}
+        else{
+          for(const [cmd] of CONTROLLER_COMMANDS){if(Number(prefs.controller.map[cmd])===i)dispatchControllerCommand(cmd,down)}
+        }
+      }
+      prev[i]=down
+    }
+    prev.length=pad.buttons.length;
+    if(!controllerRuntime.mapping&&prefs.controller.leftStick&&pad.axes?.length>=2){
+      const x=pad.axes[0]||0,y=pad.axes[1]||0,dead=.48;
+      const next={left:x<-dead,right:x>dead,up:y<-dead,down:y>dead};
+      for(const k of ['left','right','up','down'])if(next[k]!==controllerRuntime.axes[k]){dispatchControllerCommand(k,next[k]);controllerRuntime.axes[k]=next[k]}
+    }
+    syncControllerDisplay();
+  }
+  controllerRuntime.raf=requestAnimationFrame(pollControllers)
+}
+addEventListener('gamepadconnected',e=>{setControllerStatus(e.gamepad);toast('Controller connected',1400);syncControllerDisplay()});
+addEventListener('gamepaddisconnected',e=>{if(e.gamepad.index===controllerRuntime.index)setControllerStatus(firstConnectedPad())});
+$('#controllerAutoToggle').onchange=e=>{prefs.controller.autoDisplay=e.target.checked;controllerRuntime.sessionTouchOverride=!e.target.checked;saveAll();if(!prefs.controller.autoDisplay)setControllerDisplay(false,{quiet:true});else{controllerRuntime.sessionTouchOverride=false;syncControllerDisplay()}};
+$('#controllerStickToggle').onchange=e=>{prefs.controller.leftStick=e.target.checked;saveAll()};
+$('#adjustExitGestureBtn').onclick=()=>beginControllerMapping('exit');
+$('#resetControllerConfigBtn').onclick=()=>{prefs.controller.map={...DEFAULT_CONTROLLER_MAP};saveAll();cancelControllerMapping();toast('Automatic controller map restored')};
+$('#saveControllerConfigBtn').onclick=()=>{saveAll();renderControllerSettings();toast('Controller configuration saved');$('#controllerDialog')?.close?.()};
+$('#controllerResumeBtn').onclick=()=>$('#controllerGameDialog')?.close?.();
+$('#controllerTouchModeBtn').onclick=()=>{$('#controllerGameDialog')?.close?.();controllerRuntime.sessionTouchOverride=true;setControllerDisplay(false)};
+$('#controllerSetupGameBtn').onclick=()=>{$('#controllerGameDialog')?.close?.();openControllerSettings()};
+$('#controllerExitGameBtn').onclick=()=>{$('#controllerGameDialog')?.close?.();if(window.RetroDeckROM?.active)window.RetroDeckROM.exit?.();else exitGame()};
 
 const audio={
   ctx:null,master:null,nodes:[],timer:null,unlocked:false,
@@ -272,7 +418,9 @@ function renderLibrary(){
 let currentGame=null,currentDef=null,last=performance.now(),raf=0;
 function showConsole(def){
   currentDef=def;markPlayed(def.id);audio.unlock();$('#gameTitle').textContent=def.title.toUpperCase();
+  setGameAspect(def?.aspect||16/9);
   $('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');configureControls();checkOrientation();
+  syncControllerDisplay();
 }
 function startGame(id){
   originalMode=false;$('#javatari-screen').classList.add('hidden');$('#gameCanvas').classList.remove('hidden');
@@ -286,7 +434,8 @@ function exitGame(){
   if(originalMode&&javatariReady){try{Javatari.room.consoleControls.releaseControllers();Javatari.room.consoleControls.processKey(80,true);Javatari.room.consoleControls.processKey(80,false)}catch(e){}}
   currentGame?.stop?.();currentGame=null;currentDef=null;originalMode=false;cancelAnimationFrame(raf);
   $('#javatari-screen').classList.add('hidden');$('#gameCanvas').classList.remove('hidden');
-  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#menuDialog').close?.();renderLibrary()
+  setControllerDisplay(false,{quiet:true});
+  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#menuDialog').close?.();$('#controllerGameDialog')?.close?.();renderLibrary()
 }
 function restartGame(){
   if(originalMode){if(originalRomBytes)runOriginalRom(originalRomBytes,true);$('#menuDialog').close?.();return}
@@ -297,14 +446,16 @@ function togglePause(){
   if(!currentGame)return;currentGame.paused=!currentGame.paused;if(currentGame.paused)audio.stop();else if(currentGame.id==='mountain'&&(currentGame.spiritReady||currentGame.crown))audio.mountain(currentGame.crown?1:.7,currentGame.crown?1.45:1);toast(currentGame.paused?'PAUSED':'RESUMED')
 }
 function openMenu(){if(!currentGame&&!originalMode)return;if(currentGame)currentGame.paused=true;if(!originalMode)audio.stop();$('#menuGameName').textContent=currentDef?.title||'Game';$('#menuDialog').showModal()}
-function orientationBlocked(){return currentDef?.orientation==='landscape'&&matchMedia('(orientation: portrait)').matches}
-function checkOrientation(){if(!currentDef)return;$('#rotatePrompt').classList.toggle('hidden',!orientationBlocked())}
-addEventListener('orientationchange',()=>setTimeout(checkOrientation,150));addEventListener('resize',checkOrientation);
+function orientationBlocked(){return false}
+function checkOrientation(){const p=$('#rotatePrompt');if(p)p.classList.add('hidden');refreshScreenFit()}
+addEventListener('orientationchange',()=>setTimeout(checkOrientation,120));addEventListener('resize',checkOrientation);
 
 $('#homeBtn').onclick=()=>currentGame?openMenu():null;$('#menuBtn').onclick=openMenu;$('#pauseBtn').onclick=togglePause;
 $('#resumeBtn').onclick=()=>{if(currentGame)currentGame.paused=false;$('#menuDialog').close();last=performance.now()};$('#restartBtn').onclick=restartGame;$('#exitGameBtn').onclick=exitGame;
 $('#howToBtn').onclick=()=>{$('#menuDialog').close();$('#infoTitle').textContent=currentDef.title;$('#infoBody').innerHTML=currentDef.how;$('#infoDialog').showModal()};
+$('#menuControllerBtn').onclick=()=>{$('#menuDialog').close();openControllerSettings()};
 $('#settingsBtn').onclick=()=>{renderSkins();$('#settingsDialog').showModal()};$('#achievementsBtn').onclick=()=>{renderAchievements();$('#achievementsDialog').showModal()};
+$('#controllerBtn').onclick=()=>openControllerSettings();
 $('#soundBtn').onclick=()=>{prefs.sound=!prefs.sound;saveAll();applyPrefs();if(prefs.sound){audio.test();toast('SOUND ON')}else{audio.stop();toast('SOUND OFF')}};
 $('#soundTestBtn').onclick=()=>{prefs.sound=true;saveAll();applyPrefs();audio.test();toast('Sound test')};
 
@@ -342,7 +493,7 @@ async function runOriginalRom(record,restart=false){
     await loadJavatari();
     audio.unlock();
     originalMode=true;currentGame=null;
-    const def={id:'mountain-original',title:'Mountain King · Original Atari 2600',orientation:'landscape',controls:'action',
+    const def={id:'mountain-original',title:'Mountain King · Original Atari 2600',orientation:'landscape',controls:'action',aspect:4/3,
       how:'This is the original Atari 2600 cartridge running through an emulator. D-pad = Atari joystick. Any of the four coloured action buttons = the Atari fire button. MENU is outside the gameplay controls; PAUSE toggles emulator pause.'};
     showConsole(def);cancelAnimationFrame(raf);
     $('#gameCanvas').classList.add('hidden');$('#javatari-screen').classList.remove('hidden');$('#hudText').textContent='ORIGINAL 2600';
@@ -379,6 +530,14 @@ $('#requestGameBtn').onclick=()=>{renderRequests();$('#requestDialog').showModal
 $('#requestForm').addEventListener('submit',e=>{e.preventDefault();const title=$('#requestTitle').value.trim();if(!title)return;stats.requests.push({title,platform:$('#requestPlatform').value.trim(),notes:$('#requestNotes').value.trim(),at:Date.now()});saveAll();renderRequests();$('#requestTitle').value='';$('#requestPlatform').value='';$('#requestNotes').value='';toast('Game request saved')});
 $('#copyResearchBtn').onclick=async()=>{const t=$('#requestTitle').value.trim()||'[GAME TITLE]',p=$('#requestPlatform').value.trim()||'[ORIGINAL PLATFORM]',n=$('#requestNotes').value.trim()||'Preserve the feel, controls and defining gameplay without using copyrighted ROMs or extracted assets.';const text=`Research ${t} (${p}) for a lawful personal web-game tribute. Identify the defining gameplay loop, controls, level structure, scoring, audio cues, orientation needs, rights/licensing risks, and whether any legitimate browser-playable/open-source implementation exists. Prioritise primary manuals and reputable preservation sources. Requirements: ${n}`;try{await navigator.clipboard.writeText(text);toast('Research prompt copied')}catch{toast('Copy unavailable — select text manually')}};
 
-applyPrefs();renderSkins();renderAchievements();renderLibrary();renderRequests();
+window.RetroDeckApp={
+  setGameAspect,
+  setControllerDisplay,
+  syncControllerDisplay,
+  openControllerSettings,
+  gameVisible:isGameVisible
+};
+applyPrefs();renderSkins();renderAchievements();renderLibrary();renderRequests();renderControllerSettings();refreshScreenFit();
+setControllerStatus(firstConnectedPad());controllerRuntime.raf=requestAnimationFrame(pollControllers);
 if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 })();

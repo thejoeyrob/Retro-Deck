@@ -1,7 +1,7 @@
 {
   "name": "JW Retro Deck",
   "short_name": "Retro Deck",
-  "description": "JW Retro Deck: a premium personal game collection with same-page discovery, automatic artwork matching, local ROM storage and adaptive browser emulation.",
+  "description": "JW Retro Deck: a console-class personal retro game library with adaptive touch layouts, Bluetooth gamepad support, same-page discovery, artwork matching and local ROM storage.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

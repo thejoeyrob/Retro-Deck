@@ -1,22 +1,31 @@
-# JW Retro Deck v1.6.0
+# JW Retro Deck v1.7.0
 
-Flat GitHub Pages-ready PWA, rebuilt around a premium game-collection surface rather than a generic web dashboard.
+A root-flat installable PWA for hosting and playing a personal retro ROM collection with a console-class interface.
 
-## Highlights
-- Three-column cover library with reactive title filtering and 15-game / five-row pagination
-- Same-page **Collection** and **Discover** navigation — no catalogue pop-up required
-- Strongly relevance-filtered My Abandonware title search so exact searches do not fill with unrelated popular games
-- Full keyboard text entry in search fields without game-control keys swallowing letters
-- Automatic artwork lookup using Libretro box-art first, with Wikipedia artwork fallback
-- Portrait case slots that preserve original cover proportions and use a textured/blurred fill behind square artwork
-- Clear **Collection**, **Find game**, **Import**, **Find artwork**, and **Show more** actions
-- Existing IndexedDB ROM collection, system detection, EmulatorJS controls, Snake and Table Tennis preserved
-- Optional Retro Deck Cloud client plus Supabase Edge Function source for authenticated background catalogue import and private storage
+## Core library
+- Three-column cover library with live filtering and 15-game paging.
+- Local ROM import, metadata editing, artwork lookup and same-screen discovery.
+- IndexedDB storage for imported games.
+- EmulatorJS-based playback for supported systems plus the included Retro Deck originals.
 
-## Deploy the PWA
-Upload the contents of this ZIP to the repository root. Existing locally stored ROMs remain in the browser database when the deployed site keeps the same origin.
+## Controller support
+Retro Deck uses the browser Gamepad API for compatible Bluetooth and wired controllers. Pair the controller in the device's Bluetooth/USB settings, open Retro Deck and press any controller button.
 
-## Optional one-tap cloud import
-The PWA works without Supabase by falling back to local file selection. For server-side catalogue import, use `SUPABASE_SETUP.md` and deploy `SUPABASE_EDGE_FUNCTION_RETRODECK.ts` to a dedicated Retro Deck Supabase project. Keep the service-role key server-side only.
+- Standard controller auto-map.
+- D-pad plus optional left-stick navigation.
+- Face buttons, L1/R1, L2/R2, Start and Select routing.
+- Per-command manual remapping: Adjust -> press button -> release -> press the same button again to confirm.
+- Persistent saved controller configuration.
+- Controller display mode removes the on-screen console hardware and maximises the game image.
+- Default controller-display exit: triple-press R3. This is user-assignable.
 
-Only add game files you are legally entitled to use.
+## Screen behaviour
+- Portrait touch mode: game above, large controls below.
+- Landscape touch mode: D-pad left, game centre, action controls right.
+- Controller mode: game-only display with platform aspect ratio preserved.
+- Rotation never pauses or restarts gameplay.
+
+## Deployment
+Upload the files in this ZIP directly to the repository root. Do not upload the containing folder.
+
+The service worker cache name is versioned at v1.7.0 so an existing deployment will replace the older shell after the new service worker activates.
