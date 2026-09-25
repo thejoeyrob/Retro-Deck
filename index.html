@@ -321,6 +321,43 @@
         <button id="saveControllerConfigBtn" type="button" class="wideBtn primary">Save configuration</button>
       </div>
       <p class="controllerFootnote">Retro Deck uses the browser Gamepad interface. Bluetooth pairing stays in the device's own Bluetooth settings; once paired, Retro Deck detects compatible controllers automatically.</p>
+      <button id="openControllerTestBtn" type="button" class="wideBtn ctOpenBtn">Controller Test</button>
+    </div>
+  </dialog>
+
+  <dialog id="controllerTestDialog" class="panelDialog controllerTestDialog">
+    <div class="dialogCard">
+      <div class="dialogHeader">
+        <div><span class="dialogKicker">Diagnostics</span><h2>Controller Test</h2></div>
+        <button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button>
+      </div>
+      <div id="ctStartWrap" class="ctStartWrap">
+        <p class="smallNote">Reads raw data from the browser's Gamepad API for whichever controller is connected. Nothing is sent anywhere — this stays on this device. Tap Start, then press buttons / move sticks on the controller.</p>
+        <button id="ctStartBtn" type="button" class="wideBtn primary">Start Controller Test</button>
+      </div>
+      <div id="ctBody" class="ctBody hidden">
+        <div id="ctSelectorWrap" class="ctSelectorWrap hidden"><label class="field">Gamepad<select id="ctPadSelect"></select></label></div>
+        <div id="ctNoPadMsg" class="ctNoPad hidden">Bluetooth connected, but this browser is not exposing the controller through the Gamepad API.</div>
+        <div id="ctLiveWrap" class="ctLiveWrap hidden">
+          <div class="ctInfoGrid">
+            <div><span>ID</span><strong id="ctId">—</strong></div>
+            <div><span>Index</span><strong id="ctIndex">—</strong></div>
+            <div><span>Mapping</span><strong id="ctMapping">—</strong></div>
+            <div><span>Connected</span><strong id="ctConnected">—</strong></div>
+            <div><span>Buttons</span><strong id="ctButtonCount">—</strong></div>
+            <div><span>Axes</span><strong id="ctAxisCount">—</strong></div>
+            <div><span>Timestamp</span><strong id="ctTimestamp">—</strong></div>
+            <div><span>Last updated</span><strong id="ctLastUpdated">—</strong></div>
+          </div>
+          <div class="ctSectionLabel">Buttons</div>
+          <div class="ctTableHead ctRow"><span>#</span><span>Name</span><span>Pressed</span><span>Value</span><span>Touched</span></div>
+          <div id="ctButtonGrid" class="ctButtonGrid"></div>
+          <div class="ctSectionLabel">Axes</div>
+          <div id="ctAxisGrid" class="ctAxisGrid"></div>
+        </div>
+        <div class="ctSectionLabel">Event log</div>
+        <div id="ctLog" class="ctLog"></div>
+      </div>
     </div>
   </dialog>
 

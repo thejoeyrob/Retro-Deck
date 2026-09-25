@@ -291,6 +291,131 @@ $('#controllerTouchModeBtn').onclick=()=>{$('#controllerGameDialog')?.close?.();
 $('#controllerSetupGameBtn').onclick=()=>{$('#controllerGameDialog')?.close?.();openControllerSettings()};
 $('#controllerExitGameBtn').onclick=()=>{$('#controllerGameDialog')?.close?.();if(window.RetroDeckROM?.active)window.RetroDeckROM.exit?.();else exitGame()};
 
+// ------------------------------------------------------------
+// Controller Test — standalone diagnostic screen. Uses its own scoped
+// rAF loop + listeners, independent of the app-wide pollControllers loop
+// above (which keeps running regardless of whether this screen is open).
+// ------------------------------------------------------------
+const ctRuntime={running:false,raf:0,startedAt:0,log:[],selectedIndex:null,buttonEls:[],axisEls:[],onConnected:null,onDisconnected:null,noPadShown:false};
+function ctPadTimeStr(){const d=new Date();return d.toLocaleTimeString(undefined,{hour12:false})+'.'+String(d.getMilliseconds()).padStart(3,'0')}
+function ctLog(msg){
+  ctRuntime.log.push(`[${ctPadTimeStr()}] ${msg}`);
+  if(ctRuntime.log.length>200)ctRuntime.log.splice(0,ctRuntime.log.length-200);
+  const el=$('#ctLog');if(!el)return;
+  el.textContent=ctRuntime.log.join('\n');
+  el.scrollTop=el.scrollHeight;
+}
+function ctAllConnectedPads(){return Array.from(navigator.getGamepads?.()||[]).filter(p=>p?.connected)}
+function ctBuildRows(pad){
+  const btnGrid=$('#ctButtonGrid'),axGrid=$('#ctAxisGrid');
+  if(!btnGrid||!axGrid)return;
+  btnGrid.innerHTML='';axGrid.innerHTML='';ctRuntime.buttonEls=[];ctRuntime.axisEls=[];
+  pad.buttons.forEach((b,i)=>{
+    const row=document.createElement('div');row.className='ctRow';
+    row.innerHTML=`<span class="ctRowIdx">#${i}</span><span class="ctRowLabel">${gamepadButtonName(i)}</span><span class="ctRowPressed">—</span><span class="ctRowValue">—</span><span class="ctRowTouched">—</span>`;
+    btnGrid.appendChild(row);
+    ctRuntime.buttonEls[i]={row,pressed:row.querySelector('.ctRowPressed'),value:row.querySelector('.ctRowValue'),touched:row.querySelector('.ctRowTouched'),prevPressed:null,prevValue:null,prevTouched:null};
+  });
+  pad.axes.forEach((a,i)=>{
+    const row=document.createElement('div');row.className='ctRow ctAxisRow';
+    row.innerHTML=`<span class="ctRowIdx">#${i}</span><span class="ctRowLabel">AXIS ${i}</span><span class="ctRowValue" colspan="2">0.00</span>`;
+    axGrid.appendChild(row);
+    ctRuntime.axisEls[i]={row,value:row.querySelector('.ctRowValue'),prevValue:null};
+  });
+}
+function ctFlash(el){if(!el)return;el.classList.remove('ctFlash');void el.offsetWidth;el.classList.add('ctFlash')}
+function ctRenderSelector(pads){
+  const wrap=$('#ctSelectorWrap'),sel=$('#ctPadSelect');if(!wrap||!sel)return;
+  if(pads.length<=1){wrap.classList.add('hidden');return}
+  wrap.classList.remove('hidden');
+  const wantIndices=pads.map(p=>p.index).join(',');
+  if(sel.dataset.indices!==wantIndices){
+    sel.innerHTML='';
+    pads.forEach(p=>{const o=document.createElement('option');o.value=String(p.index);o.textContent=`#${p.index} · ${p.id}`;sel.appendChild(o)});
+    sel.dataset.indices=wantIndices;
+  }
+  if(ctRuntime.selectedIndex==null||!pads.some(p=>p.index===ctRuntime.selectedIndex))ctRuntime.selectedIndex=pads[0].index;
+  sel.value=String(ctRuntime.selectedIndex);
+}
+$('#ctPadSelect')?.addEventListener('change',e=>{ctRuntime.selectedIndex=Number(e.target.value)});
+function ctRenderPad(pad){
+  $('#ctId').textContent=pad.id;
+  $('#ctIndex').textContent=pad.index;
+  $('#ctMapping').textContent=pad.mapping===''?'(non-standard / empty)':(pad.mapping||'(non-standard / empty)');
+  $('#ctConnected').textContent=String(!!pad.connected);
+  $('#ctButtonCount').textContent=pad.buttons.length;
+  $('#ctAxisCount').textContent=pad.axes.length;
+  $('#ctTimestamp').textContent=typeof pad.timestamp==='number'?pad.timestamp.toFixed(2):'—';
+  $('#ctLastUpdated').textContent=ctPadTimeStr();
+  if(ctRuntime.buttonEls.length!==pad.buttons.length||ctRuntime.axisEls.length!==pad.axes.length)ctBuildRows(pad);
+  pad.buttons.forEach((b,i)=>{
+    const r=ctRuntime.buttonEls[i];if(!r)return;
+    const pressed=!!b.pressed,value=Number(b.value||0),touched=('touched'in b)?!!b.touched:null;
+    if(r.prevPressed!==pressed||r.prevValue!==value||r.prevTouched!==touched){
+      if(r.prevPressed!==null&&r.prevPressed!==pressed)ctLog(`Button ${i} (${gamepadButtonName(i)}) ${pressed?'pressed':'released'}`);
+      else if(r.prevValue!==null&&Math.abs((r.prevValue||0)-value)>.08)ctLog(`Button ${i} (${gamepadButtonName(i)}) value: ${value.toFixed(2)}`);
+      r.pressed.textContent=String(pressed);r.value.textContent=value.toFixed(2);r.touched.textContent=touched==null?'n/a':String(touched);
+      ctFlash(r.row);
+      r.prevPressed=pressed;r.prevValue=value;r.prevTouched=touched;
+    }
+  });
+  pad.axes.forEach((v,i)=>{
+    const r=ctRuntime.axisEls[i];if(!r)return;
+    const val=Number(v||0);
+    if(r.prevValue===null||Math.abs(r.prevValue-val)>.03){
+      if(r.prevValue!==null&&Math.abs(r.prevValue-val)>.08)ctLog(`Axis ${i}: ${val.toFixed(2)}`);
+      r.value.textContent=val.toFixed(2);ctFlash(r.row);r.prevValue=val;
+    }
+  });
+}
+function ctPoll(){
+  if(!ctRuntime.running)return;
+  const pads=ctAllConnectedPads();
+  ctRenderSelector(pads);
+  const noPadMsg=$('#ctNoPadMsg'),live=$('#ctLiveWrap');
+  if(!pads.length){
+    if(performance.now()-ctRuntime.startedAt>3000){
+      if(!ctRuntime.noPadShown){noPadMsg?.classList.remove('hidden');live?.classList.add('hidden');ctRuntime.noPadShown=true}
+    }
+    ctRuntime.raf=requestAnimationFrame(ctPoll);return;
+  }
+  ctRuntime.noPadShown=false;noPadMsg?.classList.add('hidden');live?.classList.remove('hidden');
+  const pad=pads.find(p=>p.index===ctRuntime.selectedIndex)||pads[0];
+  ctRenderPad(pad);
+  ctRuntime.raf=requestAnimationFrame(ctPoll);
+}
+function startControllerTest(){
+  if(ctRuntime.running)return;
+  ctRuntime.running=true;ctRuntime.startedAt=performance.now();ctRuntime.selectedIndex=null;ctRuntime.buttonEls=[];ctRuntime.axisEls=[];ctRuntime.noPadShown=false;
+  $('#ctStartWrap')?.classList.add('hidden');$('#ctBody')?.classList.remove('hidden');$('#ctNoPadMsg')?.classList.add('hidden');$('#ctLiveWrap')?.classList.remove('hidden');
+  ctRuntime.log=[];const logEl=$('#ctLog');if(logEl)logEl.textContent='';
+  ctLog('Controller test started — polling navigator.getGamepads()');
+  ctRuntime.onConnected=e=>ctLog(`gamepadconnected: #${e.gamepad.index} · ${e.gamepad.id}`);
+  ctRuntime.onDisconnected=e=>ctLog(`gamepaddisconnected: #${e.gamepad.index} · ${e.gamepad.id}`);
+  addEventListener('gamepadconnected',ctRuntime.onConnected);
+  addEventListener('gamepaddisconnected',ctRuntime.onDisconnected);
+  const already=ctAllConnectedPads();
+  if(already.length)ctLog(`${already.length} gamepad(s) already connected at start`);
+  ctRuntime.raf=requestAnimationFrame(ctPoll);
+}
+function stopControllerTest(){
+  if(!ctRuntime.running){cancelAnimationFrame(ctRuntime.raf);return}
+  ctRuntime.running=false;
+  cancelAnimationFrame(ctRuntime.raf);ctRuntime.raf=0;
+  if(ctRuntime.onConnected)removeEventListener('gamepadconnected',ctRuntime.onConnected);
+  if(ctRuntime.onDisconnected)removeEventListener('gamepaddisconnected',ctRuntime.onDisconnected);
+  ctRuntime.onConnected=null;ctRuntime.onDisconnected=null;
+}
+function resetControllerTestUI(){
+  $('#ctStartWrap')?.classList.remove('hidden');$('#ctBody')?.classList.add('hidden');$('#ctNoPadMsg')?.classList.add('hidden');
+  ['ctId','ctIndex','ctMapping','ctConnected','ctButtonCount','ctAxisCount','ctTimestamp','ctLastUpdated'].forEach(id=>{const el=$(`#${id}`);if(el)el.textContent='—'});
+  const btnGrid=$('#ctButtonGrid'),axGrid=$('#ctAxisGrid');if(btnGrid)btnGrid.innerHTML='';if(axGrid)axGrid.innerHTML='';
+  ctRuntime.buttonEls=[];ctRuntime.axisEls=[];
+}
+$('#openControllerTestBtn').onclick=()=>{resetControllerTestUI();$('#controllerTestDialog')?.showModal?.()};
+$('#ctStartBtn').onclick=()=>{audio.unlock?.();startControllerTest()};
+$('#controllerTestDialog')?.addEventListener('close',()=>{stopControllerTest();resetControllerTestUI()});
+
 const audio={
   ctx:null,master:null,nodes:[],timer:null,unlocked:false,
   unlock(){
