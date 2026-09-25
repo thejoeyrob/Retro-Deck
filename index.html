@@ -56,6 +56,19 @@
     </section>
 
     <section id="collectionSection" class="collectionSection" aria-labelledby="myGamesHeading">
+      <section id="spotlightSection" class="spotlightSection hidden" aria-label="Continue playing">
+        <div id="spotlightBackdrop" class="spotlightBackdrop"></div>
+        <div class="spotlightContent">
+          <div class="spotlightKicker">READY TO PLAY</div>
+          <h2 id="spotlightTitle">Game</h2>
+          <p id="spotlightMeta"></p>
+          <div class="spotlightActions">
+            <button id="spotlightPlayBtn" type="button" class="spotlightPlay">▶ PLAY</button>
+            <button id="spotlightDetailsBtn" type="button" class="spotlightDetails">DETAILS</button>
+          </div>
+        </div>
+        <div class="spotlightCover"><img id="spotlightCover" alt=""><div id="spotlightFallback" class="spotlightFallback">GAME</div></div>
+      </section>
       <div class="sectionHeading">
         <div>
           <h2 id="myGamesHeading">My Games</h2>
@@ -87,7 +100,7 @@
       </form>
       <div id="sourceResults" class="sourceResults discoveryGrid" aria-live="polite"></div>
       <input id="sourceRomFileInput" type="file" hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,.zip,application/zip,application/octet-stream">
-      <p class="sourceFootnote" id="cloudSourceNote">One-tap cloud import is used when the Retro Deck Supabase service is connected. Local import remains available as a fallback.</p>
+      <p class="sourceFootnote" id="cloudSourceNote">Search finds game metadata and cover art. Add the ROM from a copy you own; Retro Deck stores it locally on this device.</p>
     </section>
 
     <section id="builtInSection" class="collectionSection builtInSection" aria-labelledby="builtInHeading">
@@ -115,7 +128,8 @@
       </div>
 
       <div class="controlZone leftZone">
-        <div class="controlCaption">D-PAD</div>
+        <div class="controlCaption">MOVE</div>
+        <div id="analogPad" class="analogPad hidden" aria-label="Analog stick"><div class="analogBase"><div id="analogCap" class="analogCap"></div></div></div>
         <div id="dpad" class="dpad" aria-label="Directional pad">
           <button data-key="up" class="dpadBtn up" aria-label="Up">▲</button>
           <button data-key="left" class="dpadBtn left" aria-label="Left">◀</button>
@@ -125,12 +139,17 @@
         </div>
       </div>
 
-      <section class="screenBezel">
+      <section id="screenBezel" class="screenBezel">
         <div class="screenStage">
           <canvas id="gameCanvas" width="960" height="540" aria-label="Game screen"></canvas>
           <div id="javatari-screen" class="javatariHost hidden" aria-label="Atari 2600 game screen"></div>
           <div id="romEmulatorHost" class="romEmulatorHost hidden" aria-label="ROM emulator"></div>
           <div class="screenReflection"></div>
+          <div id="controllerOverlay" class="controllerOverlay hidden" aria-hidden="true">
+            <button type="button" class="overlayBtn" data-overlay-action="menu">MENU</button>
+            <button type="button" class="overlayBtn" data-overlay-action="select">SELECT</button>
+            <button type="button" class="overlayBtn" data-overlay-action="start">START</button>
+          </div>
         </div>
         <div id="toast" class="toast hidden"></div>
       </section>
@@ -166,6 +185,8 @@
         <button type="button" id="restartBtn" class="wideBtn">Restart game</button>
         <button type="button" id="howToBtn" class="wideBtn">Controls & how to play</button>
         <button type="button" id="menuControllerBtn" class="wideBtn">Controller setup</button>
+        <button type="button" id="saveStateBtn" class="wideBtn">Save progress</button>
+        <button type="button" id="loadStateBtn" class="wideBtn">Resume saved</button>
         <button type="button" id="exitGameBtn" class="wideBtn danger">Exit to library</button>
       </div>
     </div>
@@ -199,6 +220,7 @@
         <div class="romDetailsFields">
           <label class="field">Game title<input id="romTitleInput"></label>
           <label class="field">Platform<select id="romPlatformInput"></select></label>
+          <div id="platformRequiredHint" class="platformRequiredHint hidden" role="status">Select the original console/platform before playing so Retro Deck can load the correct emulator.</div>
           <div id="romHashLine" class="romHashLine"></div>
           <div class="dialogActions">
             <button type="button" id="playRomBtn" class="wideBtn primary">Play</button>
@@ -214,14 +236,19 @@
   <dialog id="settingsDialog" class="panelDialog largeDialog">
     <div class="dialogCard">
       <div class="dialogHeader"><div><span class="dialogKicker">Preferences</span><h2>Console appearance</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
-      <section><h3>Hardware finish</h3><div id="skinGrid" class="skinGrid"></div></section>
-      <section class="settingSection"><h3>Button colours</h3><div class="colourGrid">
-        <label>D-pad <input id="dpadColour" type="color" value="#202226"></label>
-        <label>A <input id="aColour" type="color" value="#e84b4b"></label>
-        <label>B <input id="bColour" type="color" value="#f2cc40"></label>
-        <label>X <input id="xColour" type="color" value="#4c83f1"></label>
-        <label>Y <input id="yColour" type="color" value="#4bc27b"></label>
-      </div></section>
+      <section><h3>Console shell</h3><div id="skinGrid" class="skinGrid"></div></section>
+      <section class="settingSection"><h3>Button profile</h3>
+        <div class="presetRow">
+          <label class="field">Preset colour layout<select id="buttonProfileSelect"></select></label>
+          <label class="field">Movement control<select id="movementModeSelect"><option value="dpad">D-pad</option><option value="stick">Analog stick</option></select></label>
+        </div>
+        <div class="colourGrid">
+          <label>D-pad <input id="dpadColour" type="color" value="#202226"></label>
+          <label>A <input id="aColour" type="color" value="#e84b4b"></label>
+          <label>B <input id="bColour" type="color" value="#f2cc40"></label>
+          <label>X <input id="xColour" type="color" value="#4c83f1"></label>
+          <label>Y <input id="yColour" type="color" value="#4bc27b"></label>
+        </div></section>
       <section class="settingSection"><h3>Play preferences</h3>
         <label class="switchRow"><span>Haptics</span><input id="hapticsToggle" type="checkbox" checked></label>
         <label class="switchRow"><span>Game sound</span><input id="soundToggle" type="checkbox" checked></label>
@@ -243,6 +270,7 @@
       </div>
       <label class="switchRow controllerAutoRow"><span><strong>Automatic controller display</strong><small>Hide touch hardware and maximise the game screen when a controller is active.</small></span><input id="controllerAutoToggle" type="checkbox" checked></label>
       <label class="switchRow controllerStickRow"><span><strong>Left stick mirrors D-pad</strong><small>Useful for modern Xbox/PlayStation-style controllers.</small></span><input id="controllerStickToggle" type="checkbox" checked></label>
+      <label class="switchRow controllerOverlayRow"><span><strong>Touch overlay in controller mode</strong><small>Off by default. When enabled, tapping the game screen reveals transparent Menu, Select and Start controls.</small></span><input id="controllerOverlayToggle" type="checkbox"></label>
       <div class="mappingHeader"><div><strong>COMMAND MAP</strong><small>Choose Adjust, press a controller button, release it, then press the same button again to confirm.</small></div><span id="mappingStateText">AUTO</span></div>
       <div id="controllerMappingList" class="controllerMappingList"></div>
       <div class="exitGesturePanel">

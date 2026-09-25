@@ -1,0 +1,13 @@
+JW Retro Deck v1.9.0 — FULLSCREEN GAME SESSION + TOUCH POLISH
+
+Changes in this build
+- Gameplay is now a true full-screen app state: library/header chrome is removed from the viewport and cannot sit behind the console. Exit the game to return to the library.
+- Reduced rails, padding and bezel waste so the native-aspect game picture uses the largest practical screen area while retaining reliable controls.
+- Bluetooth controller mode remains game-only/full-screen.
+- Controller-mode touch overlay is now OFF by default. A Controller Setup toggle can enable it; only then does tapping the game reveal Menu / Select / Start.
+- Global iOS/PWA touch-selection protection is scoped to the gameplay shell: no blue selection flash, text callout, long-press menu or tap highlight on game controls. Search/text fields elsewhere remain editable/selectable.
+- Platform-required instruction added. Pressing Play without a platform now highlights the platform selector and explains why it is required instead of silently failing.
+- Artwork lookup is more tolerant of naming differences: title variants, ROM filename/internal title, numeral variants, fuzzy Libretro box-art matching, then Wikipedia fallback.
+- Catalogue search remains metadata/artwork discovery. Commercial ROMs are not automatically downloaded; the result opens the local ROM picker. Sources explicitly marked redistributable can still support automatic import.
+- Removed the obsolete old/basic skin JPGs from the deliverable. Only the current shell-preview set remains.
+- Service worker cache bumped to v1.9.0.

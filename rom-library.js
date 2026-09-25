@@ -159,11 +159,53 @@ async function wikipediaCover(rec){
   }catch{}
   return null;
 }
-async function findCover(rec){
-  for(const url of coverCandidates(rec)){
-    const blob=await fetchImageBlob(url,3000);if(blob)return{blob,url};
+function normGameTitle(s=''){
+  return String(s).toLowerCase().normalize('NFKD').replace(/\b(the|game|video game|edition|version)\b/g,' ').replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function titleTokens(s=''){return normGameTitle(s).split(' ').filter(Boolean)}
+function fuzzyScore(a,b){
+  const A=titleTokens(a),B=titleTokens(b);if(!A.length||!B.length)return 0;
+  const as=new Set(A),bs=new Set(B);let common=0;for(const x of as)if(bs.has(x))common++;
+  const union=new Set([...as,...bs]).size||1;let score=common/union;
+  const na=normGameTitle(a),nb=normGameTitle(b);if(na===nb)score+=2;if(na.startsWith(nb)||nb.startsWith(na))score+=.5;
+  return score;
+}
+function artworkTerms(rec){
+  const terms=[];const add=v=>{v=String(v||'').trim();if(v&&!terms.some(x=>normGameTitle(x)===normGameTitle(v)))terms.push(v)};
+  add(rec.title);add(cleanTitle(rec.fileName));add(rec.internalTitle);add(rec.catalogTitle);
+  for(const base of [...terms]){
+    add(base.replace(/\bIII\b/ig,'3').replace(/\bII\b/ig,'2').replace(/\bIV\b/ig,'4'));
+    add(base.replace(/\b3\b/g,'III').replace(/\b2\b/g,'II').replace(/\b4\b/g,'IV'));
   }
-  return await wikipediaCover(rec);
+  return terms.slice(0,10);
+}
+const fuzzyTreeCache=new Map();
+async function githubFuzzyCover(rec){
+  const sys=SYSTEMS[rec.platform];if(!sys?.repo)return null;
+  try{
+    let paths=fuzzyTreeCache.get(sys.repo);
+    if(!paths){
+      const url=`https://api.github.com/repos/libretro-thumbnails/${sys.repo}/git/trees/master?recursive=1`;
+      const r=await fetchWithTimeout(url,{cache:'force-cache',headers:{Accept:'application/vnd.github+json'}},7000);if(!r.ok)return null;
+      const data=await r.json();paths=(data.tree||[]).map(x=>x.path).filter(x=>x.startsWith('Named_Boxarts/')&&/\.png$/i.test(x));fuzzyTreeCache.set(sys.repo,paths);
+    }
+    let best=null,bestScore=0;
+    for(const path of paths){
+      const name=decodeURIComponent(path.split('/').pop().replace(/\.png$/i,''));
+      for(const term of artworkTerms(rec)){
+        const s=fuzzyScore(term,name);if(s>bestScore){bestScore=s;best=path}
+      }
+    }
+    if(!best||bestScore<.54)return null;
+    const url=`https://raw.githubusercontent.com/libretro-thumbnails/${sys.repo}/master/${best.split('/').map(encodeURIComponent).join('/')}`;
+    const blob=await fetchImageBlob(url,4500);return blob?{blob,url}:null;
+  }catch{return null}
+}
+async function findCover(rec){
+  for(const term of artworkTerms(rec)){for(const url of coverCandidates({...rec,title:term})){const blob=await fetchImageBlob(url,2600);if(blob)return{blob,url}}}
+  const fuzzy=await githubFuzzyCover(rec);if(fuzzy)return fuzzy;
+  for(const term of artworkTerms(rec)){const wiki=await wikipediaCover({...rec,title:term});if(wiki)return wiki}
+  return null;
 }
 async function refreshCoverFor(rec,quiet=false){
   if(!navigator.onLine){if(!quiet)notify('Connect to the internet to look up artwork');return rec}
@@ -210,6 +252,21 @@ function clearCoverUrls(){for(const u of coverObjectUrls)URL.revokeObjectURL(u);
 function recordCoverUrl(rec){if(!rec.coverBlob)return'';const u=URL.createObjectURL(rec.coverBlob);coverObjectUrls.push(u);return u}
 function renderRecords(){
   clearCoverUrls();const grid=$('#romGrid'),empty=$('#romEmpty');if(!grid)return;
+  const spotlight=$('#spotlightSection');
+  if(spotlight){
+    const rec=records[0];
+    spotlight.classList.toggle('hidden',!rec);
+    if(rec){
+      const sys=SYSTEMS[rec.platform];const cover=recordCoverUrl(rec);
+      $('#spotlightTitle').textContent=rec.title||'GAME';
+      $('#spotlightMeta').textContent=[sys?.label||'Platform not set',rec.lastPlayedAt?'CONTINUE SESSION':'READY IN COLLECTION'].filter(Boolean).join(' · ');
+      const img=$('#spotlightCover'),fallback=$('#spotlightFallback'),back=$('#spotlightBackdrop');
+      if(cover){img.src=cover;img.classList.remove('hidden');fallback.classList.add('hidden');back.style.backgroundImage=`linear-gradient(90deg,#05070a 0%,#05070ad9 38%,#05070a40 100%),url('${cover}')`}
+      else{img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');fallback.textContent=(sys?.label||'GAME').toUpperCase();back.style.backgroundImage='linear-gradient(120deg,#17202a,#080b10 60%,#21170a)'}
+      $('#spotlightPlayBtn').onclick=()=>playRom(rec);
+      $('#spotlightDetailsBtn').onclick=()=>openDetails(rec.id);
+    }
+  }
   const q=($('#librarySearch')?.value||'').trim().toLowerCase();
   const shown=records.filter(r=>!q||`${r.title} ${SYSTEMS[r.platform]?.label||''} ${r.fileName}`.toLowerCase().includes(q));
   const visible=q?shown:shown.slice(0,visibleLimit);
@@ -320,11 +377,11 @@ function sendKey(k,down){
 function pulseKey(k,ms=140){sendKey(k,true);clearTimeout(pulseKey._t?.[k]);pulseKey._t=pulseKey._t||{};pulseKey._t[k]=setTimeout(()=>sendKey(k,false),ms)}
 function setSystemLabel(btn,label){if(!btn)return;btn.innerHTML=`<span class="systemDot"></span><strong>${esc(label)}</strong>`}
 async function playRom(rec){
-  if(!rec.platform||!rec.core){notify('Choose the correct platform before playing');openDetails(rec.id);return}
+  if(!rec.platform||!rec.core){notify('Select the original platform before playing',2600);await openDetails(rec.id);$('#platformRequiredHint')?.classList.remove('hidden');$('#romPlatformInput')?.classList.add('needsPlatform');$('#romPlatformInput')?.focus?.({preventScroll:true});return}
   const bytes=rec.bytes;if(!bytes){notify('ROM data is missing');return}
   if(active)exitRom();
   active=true;activeId=rec.id;activeBlobUrl=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
-  $('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');$('#gameCanvas').classList.add('hidden');$('#javatari-screen').classList.add('hidden');
+  $('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');$('#app').classList.add('game-active');document.body.classList.add('game-active');$('#gameCanvas').classList.add('hidden');$('#javatari-screen').classList.add('hidden');
   window.RetroDeckApp?.setGameAspect?.(SYSTEMS[rec.platform]?.aspect||4/3);
   const host=$('#romEmulatorHost');host.classList.remove('hidden');host.innerHTML='';
   playerFrame=document.createElement('iframe');playerFrame.className='romPlayerFrame';playerFrame.allow='autoplay; fullscreen; gamepad';playerFrame.setAttribute('allowfullscreen','');playerFrame.srcdoc=buildPlayerDocument(rec,activeBlobUrl);host.appendChild(playerFrame);
@@ -339,7 +396,7 @@ function exitRom(){
   if(activeBlobUrl){URL.revokeObjectURL(activeBlobUrl);activeBlobUrl=null}
   $('#romExitBtn').classList.add('hidden');setSystemLabel($('#menuBtn'),'MENU');setSystemLabel($('#pauseBtn'),'PAUSE');
   window.RetroDeckApp?.setControllerDisplay?.(false,{quiet:true});
-  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#gameCanvas').classList.remove('hidden');renderRecords()
+  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#app').classList.remove('game-active');document.body.classList.remove('game-active');$('#gameCanvas').classList.remove('hidden');renderRecords()
 }
 
 async function sourceSearch(q){
@@ -364,7 +421,7 @@ async function sourceSearch(q){
       const detail=[item.platform||'Platform not specified',item.year||''].filter(Boolean).join(' · ');
       const card=document.createElement('article');card.className='discoveryCard';
       const img=item.coverUrl?`<img src="${esc(item.coverUrl)}" alt="" loading="lazy">`:'<div class="sourceMiniCover">NO ART</div>';
-      card.innerHTML=`<div class="discoverArt">${img}</div><div class="discoverMeta"><strong>${esc(item.title||'Untitled')}</strong><small>${esc(detail)}</small><button type="button" data-i="${i}">${window.RetroDeckCloud?.configured?.()?'ADD TO DECK':'SELECT GAME'}</button></div>`;
+      card.innerHTML=`<div class="discoverArt">${img}</div><div class="discoverMeta"><strong>${esc(item.title||'Untitled')}</strong><small>${esc(detail)}</small><button type="button" data-i="${i}">${item?.redistributable===true?'ADD TO DECK':'IMPORT OWN ROM'}</button></div>`;
       card.querySelector('button').onclick=()=>chooseSourceRom(item,adapter);results.appendChild(card)
     })
   }catch(e){if(seq!==sourceSearchSeq)return;console.error(e);$('#sourceStatus').textContent=e.message||'Catalogue search failed.';results.innerHTML='<div class="sourceEmpty">Catalogue search is temporarily unavailable. Local import still works.</div>'}
@@ -380,19 +437,17 @@ function switchLibrarySection(which){
 }
 async function chooseSourceRom(item,adapter){
   pendingSourceItem=item;pendingSourceAdapter=adapter;
-  if(window.RetroDeckCloud?.configured?.()){
+  // Retro Deck does not auto-download commercial ROMs from catalogue pages.
+  // Automatic import is reserved for sources explicitly marked redistributable.
+  if(item?.redistributable===true&&item?.downloadUrl){
     try{
-      notify(`Adding ${item.title||'game'} from cloud…`,10000);await ensurePersistentStorage();
-      const cloud=await window.RetroDeckCloud.ingest(item);
-      const buf=await cloud.romBlob.arrayBuffer();
-      const fileName=cloud.fileName||`${item.title||'game'}.rom`;
-      const platform=platformFromLabel(cloud.platform||item.platform||'')||detectPlatform(fileName,buf);
-      const rec=await importBuffer(buf,fileName,{title:cloud.title||item.title||'',platform,source:'My Abandonware via Retro Deck Cloud',sourcePageUrl:item.pageUrl||'',year:item.year||'',catalogPlatform:item.platform||''});
-      if(cloud.coverBlob){rec.coverBlob=cloud.coverBlob;rec.coverSource=cloud.coverSource||'Retro Deck Cloud';await putRecord(rec);await reloadRecords()}
-      else if(item.coverUrl&&!rec.coverBlob){const blob=await fetchImageBlob(item.coverUrl,4000);if(blob){rec.coverBlob=blob;rec.coverSource=item.coverUrl;await putRecord(rec);await reloadRecords()}}
-      if(!rec.coverBlob)refreshCoverFor(rec,true).catch(()=>{});
-      pendingSourceItem=null;pendingSourceAdapter=null;switchLibrarySection('collection');notify(`${rec.title} added to your collection`,3500);updateStorageStatus();return
-    }catch(e){console.error(e);notify('Cloud import failed — choose your local file instead',4200)}
+      notify(`Adding ${item.title||'game'}…`,8000);const r=await fetchWithTimeout(item.downloadUrl,{cache:'no-store'},12000);if(!r.ok)throw new Error('Download failed');
+      const blob=await r.blob(),buf=await blob.arrayBuffer();const fileName=item.fileName||`${item.title||'game'}.rom`;
+      const platform=platformFromLabel(item.platform||'')||detectPlatform(fileName,buf);
+      const rec=await importBuffer(buf,fileName,{title:item.title||'',platform,source:item.source||'redistributable source',sourcePageUrl:item.pageUrl||'',year:item.year||'',catalogPlatform:item.platform||''});
+      if(item.coverUrl&&!rec.coverBlob){const cover=await fetchImageBlob(item.coverUrl,4000);if(cover){rec.coverBlob=cover;rec.coverSource=item.coverUrl;await putRecord(rec);await reloadRecords()}}
+      pendingSourceItem=null;pendingSourceAdapter=null;switchLibrarySection('collection');return;
+    }catch(e){console.error(e);notify('Automatic import failed — choose your local copy instead',3500)}
   }
   const input=$('#sourceRomFileInput');if(!input)return;input.value='';input.click();
 }
@@ -408,9 +463,8 @@ async function importChosenSourceRom(file){
   }catch(e){console.error(e);notify(e.message||'Could not add game',3500)}
 }
 function refreshSourceStatus(){
-  const cloud=window.RetroDeckCloud?.configured?.();
-  $('#sourceStatus').textContent=cloud?'Retro Deck cloud connected':'My Abandonware catalogue ready';
-  const note=$('#cloudSourceNote');if(note)note.textContent=cloud?'One-tap import is connected. Select a result to add it directly to your collection.':'Search is live. A local file picker is used until the dedicated Supabase service is connected.';
+  $('#sourceStatus').textContent='Game catalogue ready';
+  const note=$('#cloudSourceNote');if(note)note.textContent='Search finds game metadata and cover art. Choose the ROM from a copy you own; Retro Deck stores it locally on this device.';
 }
 
 // Public bridge used by the main controller code.
@@ -456,13 +510,45 @@ $('#sourceQuery').addEventListener('input',()=>{clearTimeout(sourceSearchTimer);
 window.addEventListener('retrodeck-source-changed',refreshSourceStatus);
 
 $('#saveRomMetaBtn').onclick=()=>saveDetails();
-$('#playRomBtn').onclick=async()=>{const rec=await saveDetails({close:false});if(rec){$('#romDetailsDialog').close();playRom(rec)}};
+$('#playRomBtn').onclick=async()=>{const platform=$('#romPlatformInput').value;const hint=$('#platformRequiredHint');if(!platform){hint?.classList.remove('hidden');$('#romPlatformInput').classList.add('needsPlatform');$('#romPlatformInput').focus({preventScroll:true});notify('Select the original platform before playing',2600);return}hint?.classList.add('hidden');$('#romPlatformInput').classList.remove('needsPlatform');const rec=await saveDetails({close:false});if(rec){$('#romDetailsDialog').close();playRom(rec)}};
+$('#romPlatformInput').addEventListener('change',()=>{if($('#romPlatformInput').value){$('#platformRequiredHint')?.classList.add('hidden');$('#romPlatformInput').classList.remove('needsPlatform')}});
 $('#deleteRomBtn').onclick=async()=>{if(!selectedId)return;const rec=await getRecord(selectedId);if(!rec)return;if(!confirm(`Remove ${rec.title} from Retro Deck?`))return;await deleteRecord(selectedId);selectedId=null;$('#romDetailsDialog').close();await reloadRecords();updateStorageStatus();notify('Game removed')};
 $('#refreshCoverBtn').onclick=async()=>{const rec=await saveDetails({close:false});if(rec){await refreshCoverFor(rec);const fresh=await getRecord(rec.id);if(fresh)showDetailsCover(fresh)}};
 
 window.addEventListener('message',e=>{if(e.data?.type==='retrodeck-emulator-started')notify('Game ready')});
 window.addEventListener('beforeunload',()=>{clearCoverUrls();if(activeBlobUrl)URL.revokeObjectURL(activeBlobUrl)});
 
-reloadRecords().catch(e=>{console.error(e);notify('ROM library could not open')});
+let bundledSeedPromise=null;
+async function seedBundledLibrary(){
+  if(bundledSeedPromise)return bundledSeedPromise;
+  bundledSeedPromise=(async()=>{
+    try{
+      const existing=await allRecords();if(existing.some(r=>r.id==='bundle-mountain-king-atari2600'||(String(r.title||'').toLowerCase()==='mountain king'&&String(r.platform||'').toLowerCase()==='atari2600')))return;
+      const resp=await fetch('./mountain-king-atari2600.bin');
+      if(!resp.ok)return;
+      const bytes=await resp.arrayBuffer();
+      const rec={
+        id:'bundle-mountain-king-atari2600',
+        sha1:await sha1(bytes),
+        title:'Mountain King',
+        platform:'atari2600',
+        core:SYSTEMS['atari2600'].core,
+        desc:'Bundled from your uploaded Atari 2600 ROM.',
+        source:'Bundled owner upload',
+        importedAt:Date.now(),
+        lastPlayedAt:0,
+        fileName:'Mountain King (Atari 2600).bin',
+        bytes,
+        coverSource:'./cover-mountain-king.png'
+      };
+      try{const coverResp=await fetch('./cover-mountain-king.png');if(coverResp.ok)rec.coverBlob=await coverResp.blob()}catch{}
+      await putRecord(rec);
+      await reloadRecords();
+      notify('Mountain King has been added to your collection',2200);
+    }catch(err){console.error('bundle seed failed',err)}
+  })();
+  return bundledSeedPromise;
+}
+reloadRecords().then(()=>seedBundledLibrary()).catch(e=>{console.error(e);notify('ROM library could not open')});
 updateStorageStatus();refreshSourceStatus();
 })();

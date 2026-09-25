@@ -1,7 +1,7 @@
 {
   "name": "JW Retro Deck",
   "short_name": "Retro Deck",
-  "description": "JW Retro Deck: a console-class personal retro game library with adaptive touch layouts, Bluetooth gamepad support, same-page discovery, artwork matching and local ROM storage.",
+  "description": "JW Retro Deck: a full-screen retro game library with fixed touch geometry, Bluetooth gamepad support, device-local storage, cover matching and console-style shells.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

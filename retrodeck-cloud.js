@@ -36,13 +36,5 @@ async function invoke(action,payload={}){
   return data;
 }
 async function search(query){return (await invoke('search',{query})).items||[]}
-async function fetchBlob(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`Cloud file returned ${r.status}`);return await r.blob()}
-async function ingest(item){
-  const data=await invoke('ingest',{item});
-  if(!data?.romUrl)throw new Error('Cloud import did not return a game file.');
-  const romBlob=await fetchBlob(data.romUrl);
-  const coverBlob=data.coverUrl?await fetchBlob(data.coverUrl).catch(()=>null):null;
-  return {...data,romBlob,coverBlob};
-}
-window.RetroDeckCloud={configured,getClient,search,ingest};
+window.RetroDeckCloud={configured,getClient,search};
 })();
