@@ -148,6 +148,11 @@ const CONTROLLER_COMMANDS=[
 const BUTTON_NAMES={0:'A',1:'B',2:'X',3:'Y',4:'L1 / LB',5:'R1 / RB',6:'L2 / LT',7:'R2 / RT',8:'SELECT / VIEW',9:'START / MENU',10:'L3',11:'R3',12:'D-PAD UP',13:'D-PAD DOWN',14:'D-PAD LEFT',15:'D-PAD RIGHT',16:'HOME'};
 const controllerRuntime={pad:null,index:null,prev:[],axes:{left:false,right:false,up:false,down:false},mapping:null,controllerMode:false,sessionTouchOverride:false,wasGameVisible:false,lastExitPresses:[],hintTimer:null,raf:0};
 function gamepadButtonName(i){return BUTTON_NAMES[i]||`BUTTON ${Number(i)+1}`}
+function shortControllerName(id){
+  if(!id||typeof id!=='string')return 'CONTROLLER';
+  const before=id.split('(')[0].trim();
+  return (before||id.trim()||'CONTROLLER');
+}
 function controllerAvailable(){return !!controllerRuntime.pad}
 function isGameVisible(){return $('#consoleView')?.classList.contains('active')}
 function setGameAspect(ratio=16/9){
@@ -187,7 +192,7 @@ function setControllerStatus(pad){
   if($('#controllerStatusText'))$('#controllerStatusText').textContent=pad?'Controller connected':'Waiting for controller';
   if($('#controllerNameText'))$('#controllerNameText').textContent=pad?(pad.id||'Gamepad'):'Pair it in your device Bluetooth settings, then press any controller button.';
   if($('#deckReadyText'))$('#deckReadyText').textContent=pad?'PAD ONLINE':'READY';
-  if(!pad&&controllerRuntime.controllerMode){setControllerDisplay(false,{quiet:true});toast('Controller disconnected · touch controls restored',2200)}
+  if(!pad&&controllerRuntime.controllerMode){setControllerDisplay(false,{quiet:true});toast('CONTROLLER DISCONNECTED — TOUCH CONTROLS ACTIVE',2200)}
   renderControllerSettings();
 }
 function firstConnectedPad(){const pads=navigator.getGamepads?.()||[];for(const p of pads)if(p?.connected)return p;return null}
@@ -266,8 +271,15 @@ function pollControllers(){
   }
   controllerRuntime.raf=requestAnimationFrame(pollControllers)
 }
-addEventListener('gamepadconnected',e=>{setControllerStatus(e.gamepad);toast('Controller connected',1400);syncControllerDisplay()});
+addEventListener('gamepadconnected',e=>{setControllerStatus(e.gamepad);toast(`${shortControllerName(e.gamepad?.id).toUpperCase()} CONNECTED`,1400);syncControllerDisplay()});
 addEventListener('gamepaddisconnected',e=>{if(e.gamepad.index===controllerRuntime.index)setControllerStatus(firstConnectedPad())});
+// Defensive safety net: some browsers suspend rAF loops while backgrounded and may not
+// cleanly resume gamepad polling. Re-check on visibility restore; pollControllers keeps running.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  const pad=firstConnectedPad();
+  if((pad?.index??null)!==controllerRuntime.index)setControllerStatus(pad);
+});
 $('#controllerAutoToggle').onchange=e=>{prefs.controller.autoDisplay=e.target.checked;controllerRuntime.sessionTouchOverride=!e.target.checked;saveAll();if(!prefs.controller.autoDisplay)setControllerDisplay(false,{quiet:true});else{controllerRuntime.sessionTouchOverride=false;syncControllerDisplay()}};
 $('#controllerStickToggle').onchange=e=>{prefs.controller.leftStick=e.target.checked;saveAll()};
 $('#controllerOverlayToggle').onchange=e=>{prefs.controller.touchOverlay=e.target.checked;saveAll();if(!prefs.controller.touchOverlay)$('#controllerOverlay')?.classList.add('hidden')};
