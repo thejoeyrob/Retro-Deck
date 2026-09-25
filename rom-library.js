@@ -295,6 +295,11 @@ function recommendationScores(){
     return {item,score};
   }).sort((a,b)=>b.score-a.score||a.item.rank-b.item.rank);
 }
+const FEATURE_RAIL_SIZE=5;
+// The Retro Deck 50 must always have a reliable, visible presence in this rail — reserve at
+// least 3 of the 5 slots for Top-50 catalog picks, capping owned-content highlights (recent /
+// favourite / most-played) at the remaining 2, regardless of how much the user owns or plays.
+const FEATURE_MIN_CATALOG_SLOTS=3;
 function featureItems(){
   const out=[];
   const recent=records.find(r=>r.saveState&&r.lastPlayedAt)||records.find(r=>r.lastPlayedAt);
@@ -305,9 +310,24 @@ function featureItems(){
     const most=records.filter(r=>r.id!==recent?.id).sort((a,b)=>(b.playCount||0)-(a.playCount||0)||(b.lastPlayedAt||0)-(a.lastPlayedAt||0))[0];
     if(most&&(most.playCount||0)>1)out.push({kind:'record',rec:most,kicker:'MOST PLAYED',resume:!!most.saveState});
   }
-  for(const {item} of recommendationScores().slice(0,Math.max(0,5-out.length)))out.push({kind:'catalog',item,kicker:records.length?'RECOMMENDED FOR YOU':`RETRO DECK #${item.rank}`});
+  const ownedSlotCap=FEATURE_RAIL_SIZE-FEATURE_MIN_CATALOG_SLOTS;
+  if(out.length>ownedSlotCap)out.length=ownedSlotCap;
+  const catalogSlots=FEATURE_RAIL_SIZE-out.length;
+  const picks=recommendationScores().slice(0,catalogSlots);
+  if(picks.length<catalogSlots){
+    // The unowned-recommendation pool ran dry (e.g. the user already owns almost every
+    // Top-50 title) — backfill with any remaining ranked classics so the guaranteed
+    // catalog slots stay filled wherever the ranked list can still supply one.
+    const used=new Set(picks.map(p=>p.item.rank));
+    for(const item of CLASSICS.filter(x=>x.rank<=50)){
+      if(picks.length>=catalogSlots)break;
+      if(used.has(item.rank))continue;
+      picks.push({item});used.add(item.rank);
+    }
+  }
+  for(const {item} of picks)out.push({kind:'catalog',item,kicker:records.length?'RECOMMENDED FOR YOU':`RETRO DECK #${item.rank}`});
   if(!out.length){for(const item of CLASSICS.filter(x=>x.rank<=50).slice(0,5))out.push({kind:'catalog',item,kicker:`RETRO DECK #${item.rank}`})}
-  return out.slice(0,5);
+  return out.slice(0,FEATURE_RAIL_SIZE);
 }
 function updateFeaturePosition(){
   const track=$('#featureTrack'),dots=$('#featureDots');if(!track)return;
