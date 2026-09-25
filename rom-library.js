@@ -355,8 +355,10 @@ function renderClassicCatalog(){
   const items=CLASSICS.filter(x=>x.rank<=50).slice(0,classicVisibleLimit);grid.innerHTML='';
   for(const item of items){
     const installed=findRecordForClassic(item),card=document.createElement('article');card.className='classicCard';
-    card.innerHTML=`<button type="button" class="classicArt" aria-label="Search ${esc(item.title)}"><img alt="${esc(item.title)} box art"><span class="classicRank">#${item.rank}</span>${installed?'<span class="installedBadge">INSTALLED</span>':''}</button><div class="classicMeta"><strong>${esc(item.title)}</strong><small>${esc(SYSTEMS[item.platform]?.label||item.platform)} · ${esc(item.year)}</small><button type="button" class="classicAction">${installed?'PLAY':'ADD OWN ROM'}</button></div>`;
-    installArtFallback(card.querySelector('img'),item.art||[]);
+    card.innerHTML=`<button type="button" class="classicArt caseArt" aria-label="Search ${esc(item.title)}"><img alt="${esc(item.title)} box art"><span class="classicRank">#${item.rank}</span>${installed?'<span class="installedBadge">INSTALLED</span>':''}</button><div class="classicMeta"><strong>${esc(item.title)}</strong><small>${esc(SYSTEMS[item.platform]?.label||item.platform)} · ${esc(item.year)}</small><button type="button" class="classicAction">${installed?'PLAY':'ADD OWN ROM'}</button></div>`;
+    const classicImg=card.querySelector('img'),classicArtEl=card.querySelector('.classicArt');
+    installArtFallback(classicImg,item.art||[]);
+    classicImg.onload=()=>{if(classicImg.src)classicArtEl.style.setProperty('--cover',`url('${classicImg.src}')`)};
     card.querySelector('.classicArt').onclick=()=>installed?openDetails(installed.id):openClassic(item);
     card.querySelector('.classicAction').onclick=()=>installed?playRom(installed,{resume:!!installed.saveState}):importClassic(item);
     grid.appendChild(card)
