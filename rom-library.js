@@ -649,6 +649,13 @@ function buildPlayerDocument(rec,blobUrl,stateUrl=''){
   window.EJS_controlScheme=${jsonSafe(rec.core)};
   window.EJS_defaultControls=${jsonSafe(controls)};
   window.EJS_askBeforeExit=false;
+  // Retro Deck has its own complete touch control UI (D-pad, action buttons, top
+  // MENU/PAUSE/EXIT bar). EmulatorJS's own native top button bar and on-screen virtual
+  // gamepad were never disabled, so they were competing with Retro Deck's own controls -
+  // this is what showed as a persistent virtual gamepad the user had to manually dismiss,
+  // and an unwanted native settings/cache-manager/etc menu popping up. Turning all of
+  // EmulatorJS's own UI chrome off makes Retro Deck's controls the only interface.
+  window.EJS_Buttons={playPause:false,restart:false,mute:false,settings:false,fullscreen:false,saveState:false,loadState:false,screenRecord:false,gamepad:false,cheat:false,volume:false,saveSavFiles:false,loadSavFiles:false,quickSave:false,quickLoad:false,screenshot:false,cacheManager:false,exitEmulation:false,contextMenu:false};
   window.__RETRO_INPUT_INDEX=${jsonSafe(inputIndex)};
   function retroFocus(){try{window.focus();document.body.focus();var c=document.querySelector('canvas');if(c){c.tabIndex=0;c.focus({preventScroll:true})}}catch(e){}}
   function keyboardFallback(d){
