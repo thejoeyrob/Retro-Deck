@@ -396,12 +396,12 @@ function renderRecords(){
     const cover=recordCoverUrl(rec),sys=SYSTEMS[rec.platform];
     const art=cover?`<div class="gameVisual romVisual caseArt" style="--cover:url('${cover}')"><img src="${cover}" alt="${esc(rec.title)} cover"><div class="romPlayBadge">▶</div>${rec.favourite?'<span class="favouriteBadge">★</span>':''}</div>`:`<div class="gameVisual romVisual"><div class="coverFallback"><span>${esc((sys?.label||'GAME').toUpperCase())}</span><strong>${esc(rec.title)}</strong></div><div class="romPlayBadge">▶</div>${rec.favourite?'<span class="favouriteBadge">★</span>':''}</div>`;
     b.innerHTML=`${art}<div class="gameBody"><h3>${esc(rec.title)}</h3><p>${esc(sys?.label||'Platform not set')}${rec.saveState?' · SAVED':''}</p></div>`;
-    // Manually-added games still open the full edit dialog on tap. Catalogue/app-sourced
-    // games play directly from the grid — renaming them is only reachable through the
-    // dedicated Manage collection flow, so accidental taps never open an edit surface for
-    // titles the app itself sourced. playRom() already falls back to asking for a platform
-    // when one is missing, so that correction path still works.
-    b.onclick=()=>rec.source==='local'?openDetails(rec.id):playRom(rec,{resume:!!rec.saveState});
+    // Tapping a game always opens the details dialog first, same as before - this is the
+    // path that already validates platform/core before ever calling playRom(), and bypassing
+    // it caused games to fail to launch for anything not sourced as 'local'. Renaming is
+    // still source-gated, but at the field level inside openDetails() (see there), not by
+    // skipping this proven open-details-then-play flow.
+    b.onclick=()=>openDetails(rec.id);
     grid.appendChild(b)
   });
   empty.classList.toggle('hidden',records.length>0);
@@ -609,6 +609,14 @@ async function openDetails(id){
   $('#romHashLine').innerHTML=`<span>${esc(rec.fileName)}</span><span>CRC32 ${esc((rec.crc32||'').toUpperCase())}</span><span>SHA-1 ${esc((rec.sha1||'').slice(0,12).toUpperCase())}${rec.sha1?'…':''}</span>`;
   const fav=$('#favouriteRomBtn');if(fav)fav.textContent=rec.favourite?'★ Favourite':'☆ Add to favourites';
   const play=$('#playRomBtn');if(play)play.textContent=rec.saveState?'Resume saved game':'Play';
+  // App/catalogue-sourced games can still be viewed and played from here like any other
+  // game - only the title/platform fields and the Save button are locked, so renaming stays
+  // reachable exclusively through the dedicated Manage collection edit flow. Manually-added
+  // games are fully editable here as before. Reset every time: this dialog/its fields are reused.
+  const editable=rec.source==='local';
+  $('#romTitleInput').disabled=!editable;$('#romPlatformInput').disabled=!editable;
+  $('#saveRomMetaBtn')?.classList.toggle('hidden',!editable);
+  $('#appSourcedNote')?.classList.toggle('hidden',editable);
   $('#romDetailsDialog').showModal()
 }
 async function saveDetails({close=true}={}){
