@@ -396,7 +396,13 @@ function renderRecords(){
     const cover=recordCoverUrl(rec),sys=SYSTEMS[rec.platform];
     const art=cover?`<div class="gameVisual romVisual caseArt" style="--cover:url('${cover}')"><img src="${cover}" alt="${esc(rec.title)} cover"><div class="romPlayBadge">▶</div>${rec.favourite?'<span class="favouriteBadge">★</span>':''}</div>`:`<div class="gameVisual romVisual"><div class="coverFallback"><span>${esc((sys?.label||'GAME').toUpperCase())}</span><strong>${esc(rec.title)}</strong></div><div class="romPlayBadge">▶</div>${rec.favourite?'<span class="favouriteBadge">★</span>':''}</div>`;
     b.innerHTML=`${art}<div class="gameBody"><h3>${esc(rec.title)}</h3><p>${esc(sys?.label||'Platform not set')}${rec.saveState?' · SAVED':''}</p></div>`;
-    b.onclick=()=>openDetails(rec.id);grid.appendChild(b)
+    // Manually-added games still open the full edit dialog on tap. Catalogue/app-sourced
+    // games play directly from the grid — renaming them is only reachable through the
+    // dedicated Manage collection flow, so accidental taps never open an edit surface for
+    // titles the app itself sourced. playRom() already falls back to asking for a platform
+    // when one is missing, so that correction path still works.
+    b.onclick=()=>rec.source==='local'?openDetails(rec.id):playRom(rec,{resume:!!rec.saveState});
+    grid.appendChild(b)
   });
   empty.classList.toggle('hidden',records.length>0);
   const more=$('#showMoreGamesBtn');if(more)more.classList.toggle('hidden',!!q||shown.length<=visibleLimit);
@@ -404,8 +410,189 @@ function renderRecords(){
   $('#romCount').textContent=`${records.length} game${records.length===1?'':'s'}`;if($('#romCountNav'))$('#romCountNav').textContent=records.length;
 }
 
+// ---------------------------------------------------------------------------
+// Collection management: grid / list / horizontal-strip views, drag-to-reorder
+// (persisted per record as rec.sortOrder), and the source-gated rename/edit flow
+// for app/catalogue-sourced games (manually-added games still edit directly from
+// the normal collection grid; see renderRecords()).
+// ---------------------------------------------------------------------------
+const MANAGE_VIEW_KEY='rd-collection-view';
+function getManageView(){try{return localStorage.getItem(MANAGE_VIEW_KEY)||'grid'}catch{return'grid'}}
+function setManageView(v){try{localStorage.setItem(MANAGE_VIEW_KEY,v)}catch{}}
+let manageStripIndex=0;
+let manageEditId=null;
+
+async function persistManageOrder(ids){
+  for(let i=0;i<ids.length;i++){
+    const rec=records.find(r=>r.id===ids[i]);
+    if(rec && rec.sortOrder!==i){rec.sortOrder=i;await putRecord(rec)}
+  }
+  await reloadRecords();
+  renderManageView();
+}
+
+// Pointer-based drag-to-reorder shared by the grid, list and strip management views, so
+// reordering works the same way with touch or a mouse. A tap (no meaningful pointer
+// movement) is reported as a 'manage-tap' event on the moved tile instead of a native
+// click, so callers can tell a rename/select tap apart from a drag.
+function manageDragHandlers(el,onReorder){
+  let dragging=null,moved=false,startX=0,startY=0;
+  el.addEventListener('pointerdown',e=>{
+    const tile=e.target.closest('[data-manage-id]');
+    if(!tile)return;
+    dragging=tile;moved=false;startX=e.clientX;startY=e.clientY;
+    try{tile.setPointerCapture?.(e.pointerId)}catch{}
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    if(!moved&&(Math.abs(e.clientX-startX)>6||Math.abs(e.clientY-startY)>6)){moved=true;dragging.classList.add('dragging')}
+    if(!moved)return;
+    e.preventDefault();
+    const horizontal=el.classList.contains('manageStripTrack');
+    const siblings=[...el.children].filter(c=>c!==dragging);
+    const after=siblings.find(c=>{
+      const r=c.getBoundingClientRect();
+      return horizontal?e.clientX<r.left+r.width/2:e.clientY<r.top+r.height/2;
+    });
+    if(after)el.insertBefore(dragging,after);else el.appendChild(dragging);
+  },{passive:false});
+  const finish=async()=>{
+    if(!dragging)return;
+    const tile=dragging,wasMoved=moved;dragging=null;moved=false;
+    tile.classList.remove('dragging');
+    if(wasMoved){const ids=[...el.children].map(c=>c.dataset.manageId);await onReorder(ids)}
+    else tile.dispatchEvent(new CustomEvent('manage-tap',{bubbles:true}));
+  };
+  el.addEventListener('pointerup',finish);
+  el.addEventListener('pointercancel',()=>{if(dragging){dragging.classList.remove('dragging');dragging=null;moved=false}});
+}
+
+function manageThumbHtml(rec){
+  const cover=recordCoverUrl(rec),sys=SYSTEMS[rec.platform];
+  return cover?`<img src="${cover}" alt="${esc(rec.title)} cover">`:`<div class="coverFallback"><span>${esc((sys?.label||'GAME').toUpperCase())}</span><strong>${esc(rec.title)}</strong></div>`;
+}
+
+function renderManageGrid(content){
+  const wrap=document.createElement('div');wrap.className='manageGrid manageDragZone';
+  records.forEach(rec=>{
+    const cover=recordCoverUrl(rec);
+    const tile=document.createElement('button');tile.type='button';tile.className='manageTile';tile.dataset.manageId=rec.id;
+    tile.innerHTML=`<div class="manageTileArt caseArt" style="${cover?`--cover:url('${cover}')`:''}">${manageThumbHtml(rec)}</div><div class="manageTileBody"><strong>${esc(rec.title)}</strong><small>${esc(SYSTEMS[rec.platform]?.label||'Platform not set')}</small></div>`;
+    wrap.appendChild(tile);
+  });
+  content.appendChild(wrap);
+  wrap.addEventListener('manage-tap',e=>{const id=e.target.dataset.manageId;if(id)openManageEdit(id)});
+  manageDragHandlers(wrap,persistManageOrder);
+}
+
+function renderManageList(content){
+  const wrap=document.createElement('div');wrap.className='manageList manageDragZone';
+  records.forEach(rec=>{
+    const cover=recordCoverUrl(rec),sys=SYSTEMS[rec.platform];
+    const row=document.createElement('div');row.className='manageRow';row.dataset.manageId=rec.id;row.tabIndex=0;
+    row.innerHTML=`<span class="manageDragHandle" aria-hidden="true">⠿</span><div class="manageRowArt">${cover?`<img src="${cover}" alt="${esc(rec.title)} cover">`:'<div class="manageRowArtFallback"></div>'}</div><div class="manageRowBody"><strong>${esc(rec.title)}</strong><small>${esc(sys?.label||'Platform not set')}</small></div>`;
+    wrap.appendChild(row);
+  });
+  content.appendChild(wrap);
+  wrap.addEventListener('manage-tap',e=>{const id=e.target.dataset.manageId;if(id)openManageEdit(id)});
+  manageDragHandlers(wrap,persistManageOrder);
+}
+
+function updateManageStripPreview(){
+  const rec=records[manageStripIndex];
+  const preview=$('#manageStripPreview'),img=$('#manageStripPreviewImg'),fallback=$('#manageStripPreviewFallback'),title=$('#manageStripPreviewTitle'),sub=$('#manageStripPreviewSub');
+  if(!rec){preview.classList.add('hidden');return}
+  preview.classList.remove('hidden');
+  const cover=recordCoverUrl(rec),sys=SYSTEMS[rec.platform];
+  if(cover){img.src=cover;img.classList.remove('hidden');fallback.classList.add('hidden')}
+  else{img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');fallback.textContent=sys?.label||'NO COVER'}
+  title.textContent=rec.title;sub.textContent=sys?.label||'Platform not set';
+}
+
+function renderManageStrip(content){
+  const wrap=document.createElement('div');wrap.className='manageStripTrack manageDragZone';
+  manageStripIndex=Math.min(Math.max(0,manageStripIndex),records.length-1);
+  records.forEach((rec,i)=>{
+    const cover=recordCoverUrl(rec);
+    const thumb=document.createElement('button');thumb.type='button';thumb.className='manageStripThumb'+(i===manageStripIndex?' is-selected':'');thumb.dataset.manageId=rec.id;
+    thumb.innerHTML=cover?`<img src="${cover}" alt="${esc(rec.title)} cover">`:`<div class="manageStripThumbFallback">${esc(rec.title.slice(0,2).toUpperCase())}</div>`;
+    wrap.appendChild(thumb);
+  });
+  content.appendChild(wrap);
+  wrap.addEventListener('manage-tap',e=>{
+    const id=e.target.dataset.manageId;if(!id)return;
+    manageStripIndex=records.findIndex(r=>r.id===id);
+    wrap.querySelectorAll('.manageStripThumb').forEach(t=>t.classList.toggle('is-selected',t.dataset.manageId===id));
+    updateManageStripPreview();
+  });
+  manageDragHandlers(wrap,async ids=>{
+    const selectedId=records[manageStripIndex]?.id;
+    await persistManageOrder(ids);
+    if(selectedId)manageStripIndex=records.findIndex(r=>r.id===selectedId);
+  });
+  updateManageStripPreview();
+}
+
+function renderManageView(){
+  const mode=getManageView();
+  document.querySelectorAll('.manageViewTab').forEach(t=>t.classList.toggle('is-active',t.dataset.view===mode));
+  const content=$('#manageContent');if(!content)return;
+  content.innerHTML='';
+  $('#manageStripPreview')?.classList.toggle('hidden',mode!=='strip');
+  if(!records.length){content.innerHTML='<div class="sourceEmpty">Your collection is empty. Import or add a game first.</div>';return}
+  if(mode==='list')renderManageList(content);
+  else if(mode==='strip')renderManageStrip(content);
+  else renderManageGrid(content);
+}
+function openManageDialog(){renderManageView();$('#collectionManageDialog').showModal()}
+function fillManagePlatforms(selected=''){
+  const el=$('#manageEditPlatform');if(!el)return;
+  el.innerHTML='<option value="">Choose platform…</option>'+Object.entries(SYSTEMS).map(([id,s])=>`<option value="${id}" ${id===selected?'selected':''}>${esc(s.label)}</option>`).join('')
+}
+async function openManageEdit(id){
+  const rec=records.find(r=>r.id===id)||await getRecord(id);if(!rec)return;
+  manageEditId=id;
+  $('#manageEditHeading').textContent=rec.title;
+  $('#manageEditTitle').value=rec.title;
+  fillManagePlatforms(rec.platform);
+  $('#manageEditDialog').showModal();
+}
+async function saveManageEdit(){
+  if(!manageEditId)return;
+  const rec=await getRecord(manageEditId);if(!rec)return;
+  rec.title=$('#manageEditTitle').value.trim()||rec.title;
+  rec.platform=$('#manageEditPlatform').value;rec.core=SYSTEMS[rec.platform]?.core||'';
+  await putRecord(rec);await reloadRecords();
+  $('#manageEditDialog').close();
+  renderManageView();
+  notify('Game details saved',1600);
+}
+async function deleteManageEdit(){
+  if(!manageEditId)return;
+  const rec=await getRecord(manageEditId);if(!rec)return;
+  if(!confirm(`Remove ${rec.title} from Retro Deck?`))return;
+  revokeCoverUrl(manageEditId);await deleteRecord(manageEditId);
+  manageEditId=null;
+  $('#manageEditDialog').close();
+  await reloadRecords();
+  renderManageView();
+  updateStorageStatus();
+  notify('Game removed');
+}
+
 function formatBytes(n=0){if(n<1024)return`${n} B`;if(n<1048576)return`${(n/1024).toFixed(0)} KB`;return`${(n/1048576).toFixed(n>104857600?0:1)} MB`}
-async function reloadRecords(){records=(await allRecords()).sort((a,b)=>(b.lastPlayedAt||b.importedAt||0)-(a.lastPlayedAt||a.importedAt||0));renderRecords()}
+async function reloadRecords(){
+  const all=await allRecords();
+  const hasCustomOrder=all.some(r=>typeof r.sortOrder==='number');
+  records=hasCustomOrder
+    ? all.sort((a,b)=>{
+        const ao=typeof a.sortOrder==='number'?a.sortOrder:Infinity;
+        const bo=typeof b.sortOrder==='number'?b.sortOrder:Infinity;
+        return ao!==bo?ao-bo:(b.lastPlayedAt||b.importedAt||0)-(a.lastPlayedAt||a.importedAt||0);
+      })
+    : all.sort((a,b)=>(b.lastPlayedAt||b.importedAt||0)-(a.lastPlayedAt||a.importedAt||0));
+  renderRecords();
+}
 
 function fillPlatforms(selected=''){
   const el=$('#romPlatformInput');el.innerHTML='<option value="">Choose platform…</option>'+Object.entries(SYSTEMS).map(([id,s])=>`<option value="${id}" ${id===selected?'selected':''}>${esc(s.label)}</option>`).join('')
@@ -664,6 +851,13 @@ $('#playRomBtn').onclick=async()=>{const platform=$('#romPlatformInput').value;c
 $('#romPlatformInput').addEventListener('change',()=>{if($('#romPlatformInput').value){$('#platformRequiredHint')?.classList.add('hidden');$('#romPlatformInput').classList.remove('needsPlatform')}});
 $('#deleteRomBtn').onclick=async()=>{if(!selectedId)return;const rec=await getRecord(selectedId);if(!rec)return;if(!confirm(`Remove ${rec.title} from Retro Deck?`))return;revokeCoverUrl(selectedId);await deleteRecord(selectedId);selectedId=null;$('#romDetailsDialog').close();await reloadRecords();updateStorageStatus();notify('Game removed')};
 $('#refreshCoverBtn').onclick=async()=>{const rec=await saveDetails({close:false});if(rec){await refreshCoverFor(rec);const fresh=await getRecord(rec.id);if(fresh)showDetailsCover(fresh)}};
+
+$('#manageCollectionBtn')?.addEventListener('click',openManageDialog);
+document.querySelectorAll('.manageViewTab').forEach(tab=>tab.addEventListener('click',()=>{setManageView(tab.dataset.view);renderManageView()}));
+$('#manageStripEditBtn')?.addEventListener('click',()=>{const rec=records[manageStripIndex];if(rec)openManageEdit(rec.id)});
+$('#manageStripPlayBtn')?.addEventListener('click',()=>{const rec=records[manageStripIndex];if(rec){$('#collectionManageDialog').close();playRom(rec,{resume:!!rec.saveState})}});
+$('#manageEditSaveBtn')?.addEventListener('click',saveManageEdit);
+$('#manageEditDeleteBtn')?.addEventListener('click',deleteManageEdit);
 
 window.addEventListener('message',e=>{if(e.data?.type==='retrodeck-emulator-started')notify('Game ready')});
 window.addEventListener('pagehide',()=>{if(active)captureActiveState({quiet:true})});

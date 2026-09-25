@@ -67,7 +67,10 @@
           <h2 id="myGamesHeading">My Games</h2>
           <p id="storageStatus">Checking local storage…</p>
         </div>
-        <span id="romCount" class="libraryCount">0 games</span>
+        <div class="sectionHeadingActions">
+          <button id="manageCollectionBtn" class="toolButton" type="button">Manage</button>
+          <span id="romCount" class="libraryCount">0 games</span>
+        </div>
       </div>
       <section id="romGrid" class="gameGrid romGrid coverShelf" aria-label="ROM collection"></section>
       <div id="romEmpty" class="romEmpty">
@@ -228,6 +231,42 @@
             <button type="button" id="deleteRomBtn" class="wideBtn danger">Remove game</button>
           </div>
         </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="collectionManageDialog" class="panelDialog largeDialog manageDialog">
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Collection</span><h2>Manage your games</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
+      <div class="manageViewTabs" role="tablist" aria-label="View mode">
+        <button type="button" class="manageViewTab" data-view="grid">Grid</button>
+        <button type="button" class="manageViewTab" data-view="list">List</button>
+        <button type="button" class="manageViewTab" data-view="strip">Strip</button>
+      </div>
+      <div id="manageStripPreview" class="manageStripPreview hidden">
+        <div class="manageStripPreviewArt"><img id="manageStripPreviewImg" alt="" class="hidden"><div id="manageStripPreviewFallback" class="coverFallback hidden">NO COVER</div></div>
+        <div class="manageStripPreviewMeta">
+          <strong id="manageStripPreviewTitle"></strong>
+          <small id="manageStripPreviewSub"></small>
+          <div class="manageStripPreviewActions">
+            <button type="button" id="manageStripEditBtn" class="wideBtn">Rename / edit</button>
+            <button type="button" id="manageStripPlayBtn" class="wideBtn primary">Play</button>
+          </div>
+        </div>
+      </div>
+      <div id="manageContent" class="manageContent"></div>
+      <p class="smallNote">Drag a tile to reorder your collection. Tap a game to rename it, change its platform, or remove it.</p>
+    </div>
+  </dialog>
+
+  <dialog id="manageEditDialog" class="panelDialog">
+    <div class="dialogCard">
+      <div class="dialogHeader"><div><span class="dialogKicker">Edit game</span><h2 id="manageEditHeading">Game</h2></div><button type="button" class="closeBtn" data-dialog-close aria-label="Close">×</button></div>
+      <label class="field">Game title<input id="manageEditTitle"></label>
+      <label class="field">Platform<select id="manageEditPlatform"></select></label>
+      <div class="dialogActions">
+        <button type="button" id="manageEditSaveBtn" class="wideBtn primary">Save</button>
+        <button type="button" id="manageEditDeleteBtn" class="wideBtn danger">Remove game</button>
       </div>
     </div>
   </dialog>
