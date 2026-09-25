@@ -23,7 +23,11 @@ const SYSTEMS={
 
 let records=[];
 let selectedId=null;
-let coverObjectUrls=[];
+const CLASSICS=window.RETRO_DECK_CLASSICS||[];
+const coverUrlCache=new Map();
+let classicVisibleLimit=12;
+let featureIndex=0,featureTimer=0,featurePointer=null;
+let activeStateBlobUrl=null,autoSaveTimer=0,exiting=false;
 let active=false;
 let activeId=null;
 let activeBlobUrl=null;
@@ -211,7 +215,7 @@ async function refreshCoverFor(rec,quiet=false){
   if(!navigator.onLine){if(!quiet)notify('Connect to the internet to look up artwork');return rec}
   if(!quiet)notify('Searching for original cover artwork…',5000);
   const found=await findCover(rec);
-  if(found){rec.coverBlob=found.blob;rec.coverSource=found.url;rec.coverCheckedAt=Date.now();await putRecord(rec);if(!quiet)notify('Cover artwork saved');await reloadRecords();return rec}
+  if(found){rec.coverBlob=found.blob;rec.coverSource=found.url;rec.coverCheckedAt=Date.now();revokeCoverUrl(rec.id);await putRecord(rec);if(!quiet)notify('Cover artwork saved');await reloadRecords();return rec}
   rec.coverCheckedAt=Date.now();await putRecord(rec);if(!quiet)notify('No reliable cover match found');await reloadRecords();return rec
 }
 
@@ -226,12 +230,14 @@ async function updateStorageStatus(){
 async function importBuffer(buf,fileName,overrides={}){
   if(!buf||!buf.byteLength)throw new Error('Empty ROM file');
   if(buf.byteLength>MAX_SINGLE_ROM)throw new Error('ROM is too large for this build');
-  const platform=overrides.platform||detectPlatform(fileName,buf);
+  let platform=overrides.platform||detectPlatform(fileName,buf);
   const digest=await sha1(buf), crc=crc32(buf);
   const duplicate=records.find(r=>digest&&r.sha1===digest);
   if(duplicate){notify(`${duplicate.title} is already in your library`);return duplicate}
-  const inside=internalTitle(platform,buf);
-  const rec={kind:'library-rom',id:uuid(),fileName,title:overrides.title||bestTitle(fileName,platform,buf),platform,core:SYSTEMS[platform]?.core||'',bytes:buf,size:buf.byteLength,sha1:digest,crc32:crc,internalTitle:inside,importedAt:Date.now(),source:overrides.source||'local',sourcePageUrl:overrides.sourcePageUrl||'',catalogYear:overrides.year||'',catalogPlatform:overrides.catalogPlatform||''};
+  const inside=internalTitle(platform,buf);let title=overrides.title||bestTitle(fileName,platform,buf);
+  let bestClassic=null,bestClassicScore=0;for(const item of CLASSICS){let s=fuzzyScore(title,item.title);for(const a of item.aliases||[])s=Math.max(s,fuzzyScore(title,a));if(platform===item.platform)s+=.2;if(s>bestClassicScore){bestClassicScore=s;bestClassic=item}}
+  if(bestClassic&&bestClassicScore>=1){title=bestClassic.title;if(!platform)platform=bestClassic.platform}
+  const rec={kind:'library-rom',id:uuid(),fileName,title,platform,core:SYSTEMS[platform]?.core||'',bytes:buf,size:buf.byteLength,sha1:digest,crc32:crc,internalTitle:inside,importedAt:Date.now(),source:overrides.source||'local',sourcePageUrl:overrides.sourcePageUrl||'',catalogYear:overrides.year||bestClassic?.year||'',catalogPlatform:overrides.catalogPlatform||''};
   await putRecord(rec);await reloadRecords();
   notify(platform?`${rec.title} added to Retro Deck`:`${rec.title} added — choose its platform`);
   refreshCoverFor(rec,true).catch(()=>{});
@@ -248,41 +254,132 @@ async function importFiles(files){
   }finally{importBusy=false;$('#romFileInput').value='';updateStorageStatus()}
 }
 
-function clearCoverUrls(){for(const u of coverObjectUrls)URL.revokeObjectURL(u);coverObjectUrls=[]}
-function recordCoverUrl(rec){if(!rec.coverBlob)return'';const u=URL.createObjectURL(rec.coverBlob);coverObjectUrls.push(u);return u}
-function renderRecords(){
-  clearCoverUrls();const grid=$('#romGrid'),empty=$('#romEmpty');if(!grid)return;
-  const spotlight=$('#spotlightSection');
-  if(spotlight){
-    const rec=records[0];
-    spotlight.classList.toggle('hidden',!rec);
-    if(rec){
-      const sys=SYSTEMS[rec.platform];const cover=recordCoverUrl(rec);
-      $('#spotlightTitle').textContent=rec.title||'GAME';
-      $('#spotlightMeta').textContent=[sys?.label||'Platform not set',rec.lastPlayedAt?'CONTINUE SESSION':'READY IN COLLECTION'].filter(Boolean).join(' · ');
-      const img=$('#spotlightCover'),fallback=$('#spotlightFallback'),back=$('#spotlightBackdrop');
-      if(cover){img.src=cover;img.classList.remove('hidden');fallback.classList.add('hidden');back.style.backgroundImage=`linear-gradient(90deg,#05070a 0%,#05070ad9 38%,#05070a40 100%),url('${cover}')`}
-      else{img.removeAttribute('src');img.classList.add('hidden');fallback.classList.remove('hidden');fallback.textContent=(sys?.label||'GAME').toUpperCase();back.style.backgroundImage='linear-gradient(120deg,#17202a,#080b10 60%,#21170a)'}
-      $('#spotlightPlayBtn').onclick=()=>playRom(rec);
-      $('#spotlightDetailsBtn').onclick=()=>openDetails(rec.id);
-    }
+function revokeCoverUrl(id){const u=coverUrlCache.get(id);if(u){try{URL.revokeObjectURL(u)}catch{}coverUrlCache.delete(id)}}
+function clearCoverUrls(){for(const [id,u] of coverUrlCache){try{URL.revokeObjectURL(u)}catch{}}coverUrlCache.clear()}
+function recordCoverUrl(rec){if(!rec?.coverBlob)return'';if(coverUrlCache.has(rec.id))return coverUrlCache.get(rec.id);const u=URL.createObjectURL(rec.coverBlob);coverUrlCache.set(rec.id,u);return u}
+function installArtFallback(img,candidates=[]){if(!img||!candidates.length)return;let i=0;img.src=candidates[i];img.onerror=()=>{i++;if(i<candidates.length)img.src=candidates[i];else{img.onerror=null;img.classList.add('artFailed')}}}
+function catalogMatchForRecord(rec){
+  let best=null,bestScore=0;
+  for(const item of CLASSICS){
+    let s=fuzzyScore(rec.title,item.title);
+    for(const a of item.aliases||[])s=Math.max(s,fuzzyScore(rec.title,a));
+    if(rec.platform===item.platform)s+=.2;
+    if(s>bestScore){bestScore=s;best=item}
   }
+  return bestScore>=1.0?best:null;
+}
+function findRecordForClassic(item){
+  let best=null,bestScore=0;
+  for(const rec of records){
+    let s=fuzzyScore(rec.title,item.title);
+    for(const a of item.aliases||[])s=Math.max(s,fuzzyScore(rec.title,a));
+    if(rec.platform===item.platform)s+=.25;
+    if(s>bestScore){bestScore=s;best=rec}
+  }
+  return bestScore>=1.0?best:null;
+}
+function recommendationScores(){
+  const platformWeight=new Map(),genreWeight=new Map(),tokens=new Map();
+  for(const rec of records){
+    const w=1+(Number(rec.playCount)||0)*1.4+(rec.favourite?5:0);
+    platformWeight.set(rec.platform,(platformWeight.get(rec.platform)||0)+w);
+    const cat=catalogMatchForRecord(rec);
+    for(const g of cat?.genres||[])genreWeight.set(g,(genreWeight.get(g)||0)+w);
+    for(const t of titleTokens(rec.title)){if(t.length>3)tokens.set(t,(tokens.get(t)||0)+w)}
+  }
+  return CLASSICS.filter(x=>x.rank<=50&&!findRecordForClassic(x)).map(item=>{
+    let score=(51-item.rank)*.045+(platformWeight.get(item.platform)||0)*1.5;
+    for(const g of item.genres||[])score+=(genreWeight.get(g)||0)*1.15;
+    const candidateTokens=titleTokens(`${item.title} ${(item.aliases||[]).join(' ')}`);
+    for(const t of candidateTokens)if(tokens.has(t))score+=tokens.get(t)*.65;
+    return {item,score};
+  }).sort((a,b)=>b.score-a.score||a.item.rank-b.item.rank);
+}
+function featureItems(){
+  const out=[];
+  const recent=records.find(r=>r.saveState&&r.lastPlayedAt)||records.find(r=>r.lastPlayedAt);
+  if(recent)out.push({kind:'record',rec:recent,kicker:recent.saveState?'JUMP BACK IN':'RECENTLY PLAYED',resume:!!recent.saveState});
+  const fav=records.filter(r=>r.favourite&&r.id!==recent?.id).sort((a,b)=>(b.playCount||0)-(a.playCount||0)||(b.lastPlayedAt||0)-(a.lastPlayedAt||0))[0];
+  if(fav)out.push({kind:'record',rec:fav,kicker:'YOUR FAVOURITE',resume:!!fav.saveState});
+  else{
+    const most=records.filter(r=>r.id!==recent?.id).sort((a,b)=>(b.playCount||0)-(a.playCount||0)||(b.lastPlayedAt||0)-(a.lastPlayedAt||0))[0];
+    if(most&&(most.playCount||0)>1)out.push({kind:'record',rec:most,kicker:'MOST PLAYED',resume:!!most.saveState});
+  }
+  for(const {item} of recommendationScores().slice(0,Math.max(0,5-out.length)))out.push({kind:'catalog',item,kicker:records.length?'RECOMMENDED FOR YOU':`RETRO DECK #${item.rank}`});
+  if(!out.length){for(const item of CLASSICS.filter(x=>x.rank<=50).slice(0,5))out.push({kind:'catalog',item,kicker:`RETRO DECK #${item.rank}`})}
+  return out.slice(0,5);
+}
+function updateFeaturePosition(){
+  const track=$('#featureTrack'),dots=$('#featureDots');if(!track)return;
+  const count=track.children.length;if(!count)return;featureIndex=(featureIndex+count)%count;
+  track.style.transform=`translate3d(${-featureIndex*100}%,0,0)`;
+  dots?.querySelectorAll('button').forEach((d,i)=>d.classList.toggle('is-active',i===featureIndex));
+}
+function scheduleFeatureLoop(){clearInterval(featureTimer);const count=$('#featureTrack')?.children.length||0;if(count>1)featureTimer=setInterval(()=>{featureIndex++;updateFeaturePosition()},7200)}
+function openClassic(item){
+  switchLibrarySection('discover');
+  const q=$('#sourceQuery');if(q)q.value=item.title;
+  sourceSearch(item.title);
+  setTimeout(()=>$('#sourceResults')?.scrollIntoView?.({behavior:'smooth',block:'start'}),120);
+}
+function importClassic(item){
+  pendingSourceItem={title:item.title,platform:SYSTEMS[item.platform]?.label||item.platform,year:item.year,coverUrl:item.art?.[0]||'',pageUrl:'',catalogOnly:true};
+  pendingSourceAdapter=window.RETRO_DECK_ROM_SOURCE;
+  const input=$('#sourceRomFileInput');if(input){input.value='';input.click()}
+}
+function renderFeatureRail(){
+  const rail=$('#featureRail'),track=$('#featureTrack'),dots=$('#featureDots');if(!rail||!track||!dots)return;
+  const items=featureItems();rail.classList.toggle('hidden',!items.length);track.innerHTML='';dots.innerHTML='';featureIndex=Math.min(featureIndex,Math.max(0,items.length-1));
+  items.forEach((f,i)=>{
+    const slide=document.createElement('article');slide.className='featureSlide';
+    if(f.kind==='record'){
+      const rec=f.rec,sys=SYSTEMS[rec.platform],cover=recordCoverUrl(rec);
+      slide.innerHTML=`<div class="featureBackdrop"></div><div class="featureCopy"><div class="featureKicker">${esc(f.kicker)}</div><h2>${esc(rec.title)}</h2><p>${esc(sys?.label||'Platform not set')}${rec.saveState?' · Saved '+new Date(rec.saveStateAt||rec.lastPlayedAt||Date.now()).toLocaleDateString():''}</p><div class="featureActions"><button type="button" class="featurePrimary">${f.resume?'▶ RESUME':'▶ PLAY'}</button><button type="button" class="featureSecondary">DETAILS</button></div></div><div class="featureCover">${cover?`<img src="${cover}" alt="${esc(rec.title)} cover">`:`<div class="featureArtFallback">${esc((sys?.label||'GAME').toUpperCase())}</div>`}</div>`;
+      const back=slide.querySelector('.featureBackdrop');if(cover)back.style.backgroundImage=`linear-gradient(90deg,#05070af5 0%,#05070ad6 37%,#05070a52 70%,#05070a99 100%),url('${cover}')`;
+      slide.querySelector('.featurePrimary').onclick=()=>playRom(rec,{resume:f.resume});
+      slide.querySelector('.featureSecondary').onclick=()=>openDetails(rec.id);
+    }else{
+      const item=f.item,sys=SYSTEMS[item.platform];
+      slide.innerHTML=`<div class="featureBackdrop"></div><div class="featureCopy"><div class="featureKicker">${esc(f.kicker)}</div><h2>${esc(item.title)}</h2><p>${esc(sys?.label||item.platform)} · ${esc(item.year||'Classic')} · ${(item.genres||[]).slice(0,2).map(esc).join(' / ')}</p><div class="featureActions"><button type="button" class="featurePrimary">FIND GAME</button><button type="button" class="featureSecondary">ADD OWN ROM</button></div></div><div class="featureCover"><img alt="${esc(item.title)} box art"></div>`;
+      const img=slide.querySelector('.featureCover img'),back=slide.querySelector('.featureBackdrop');installArtFallback(img,item.art||[]);
+      img.onload=()=>{if(img.src)back.style.backgroundImage=`linear-gradient(90deg,#05070af8 0%,#05070ae6 40%,#05070a62 72%,#05070aa0 100%),url('${img.src}')`};
+      slide.querySelector('.featurePrimary').onclick=()=>openClassic(item);
+      slide.querySelector('.featureSecondary').onclick=()=>importClassic(item);
+    }
+    track.appendChild(slide);const dot=document.createElement('button');dot.type='button';dot.setAttribute('aria-label',`Show featured item ${i+1}`);dot.onclick=()=>{featureIndex=i;updateFeaturePosition();scheduleFeatureLoop()};dots.appendChild(dot)
+  });
+  updateFeaturePosition();scheduleFeatureLoop();
+}
+function renderClassicCatalog(){
+  const grid=$('#classicCatalogGrid'),more=$('#showMoreClassicsBtn');if(!grid)return;
+  const items=CLASSICS.filter(x=>x.rank<=50).slice(0,classicVisibleLimit);grid.innerHTML='';
+  for(const item of items){
+    const installed=findRecordForClassic(item),card=document.createElement('article');card.className='classicCard';
+    card.innerHTML=`<button type="button" class="classicArt" aria-label="Search ${esc(item.title)}"><img alt="${esc(item.title)} box art"><span class="classicRank">#${item.rank}</span>${installed?'<span class="installedBadge">INSTALLED</span>':''}</button><div class="classicMeta"><strong>${esc(item.title)}</strong><small>${esc(SYSTEMS[item.platform]?.label||item.platform)} · ${esc(item.year)}</small><button type="button" class="classicAction">${installed?'PLAY':'ADD OWN ROM'}</button></div>`;
+    installArtFallback(card.querySelector('img'),item.art||[]);
+    card.querySelector('.classicArt').onclick=()=>installed?openDetails(installed.id):openClassic(item);
+    card.querySelector('.classicAction').onclick=()=>installed?playRom(installed,{resume:!!installed.saveState}):importClassic(item);
+    grid.appendChild(card)
+  }
+  if(more){more.classList.toggle('hidden',classicVisibleLimit>=50);more.textContent=`Show more classics (${Math.min(50,classicVisibleLimit)}/50)`}
+}
+function renderRecords(){
+  const grid=$('#romGrid'),empty=$('#romEmpty');if(!grid)return;
+  renderFeatureRail();renderClassicCatalog();
   const q=($('#librarySearch')?.value||'').trim().toLowerCase();
   const shown=records.filter(r=>!q||`${r.title} ${SYSTEMS[r.platform]?.label||''} ${r.fileName}`.toLowerCase().includes(q));
-  const visible=q?shown:shown.slice(0,visibleLimit);
-  grid.innerHTML='';
+  const visible=q?shown:shown.slice(0,visibleLimit);grid.innerHTML='';
   visible.forEach(rec=>{
     const b=document.createElement('button');b.type='button';b.className='gameCard romCard';
     const cover=recordCoverUrl(rec),sys=SYSTEMS[rec.platform];
-    const art=cover?`<div class="gameVisual romVisual caseArt" style="--cover:url('${cover}')"><img src="${cover}" alt="${esc(rec.title)} cover"><div class="romPlayBadge">▶</div></div>`:`<div class="gameVisual romVisual"><div class="coverFallback"><span>${esc((sys?.label||'GAME').toUpperCase())}</span><strong>${esc(rec.title)}</strong></div><div class="romPlayBadge">▶</div></div>`;
-    b.innerHTML=`${art}<div class="gameBody"><h3>${esc(rec.title)}</h3><p>${esc(sys?.label||'Platform not set')}</p></div>`;
+    const art=cover?`<div class="gameVisual romVisual caseArt" style="--cover:url('${cover}')"><img src="${cover}" alt="${esc(rec.title)} cover"><div class="romPlayBadge">▶</div>${rec.favourite?'<span class="favouriteBadge">★</span>':''}</div>`:`<div class="gameVisual romVisual"><div class="coverFallback"><span>${esc((sys?.label||'GAME').toUpperCase())}</span><strong>${esc(rec.title)}</strong></div><div class="romPlayBadge">▶</div>${rec.favourite?'<span class="favouriteBadge">★</span>':''}</div>`;
+    b.innerHTML=`${art}<div class="gameBody"><h3>${esc(rec.title)}</h3><p>${esc(sys?.label||'Platform not set')}${rec.saveState?' · SAVED':''}</p></div>`;
     b.onclick=()=>openDetails(rec.id);grid.appendChild(b)
   });
   empty.classList.toggle('hidden',records.length>0);
   const more=$('#showMoreGamesBtn');if(more)more.classList.toggle('hidden',!!q||shown.length<=visibleLimit);
   const status=$('#collectionMatchStatus');if(status)status.textContent=q?`${shown.length} match${shown.length===1?'':'es'}`:(shown.length>visible.length?`${visible.length} of ${shown.length}`:'');
-  $('#romCount').textContent=`${records.length} game${records.length===1?'':'s'}`;
-  if($('#romCountNav'))$('#romCountNav').textContent=records.length;
+  $('#romCount').textContent=`${records.length} game${records.length===1?'':'s'}`;if($('#romCountNav'))$('#romCountNav').textContent=records.length;
 }
 
 function formatBytes(n=0){if(n<1024)return`${n} B`;if(n<1048576)return`${(n/1024).toFixed(0)} KB`;return`${(n/1048576).toFixed(n>104857600?0:1)} MB`}
@@ -301,6 +398,8 @@ async function openDetails(id){
   const rec=records.find(r=>r.id===id)||await getRecord(id);if(!rec)return;selectedId=id;
   $('#romDetailsHeading').textContent=rec.title;$('#romTitleInput').value=rec.title;fillPlatforms(rec.platform);showDetailsCover(rec);
   $('#romHashLine').innerHTML=`<span>${esc(rec.fileName)}</span><span>CRC32 ${esc((rec.crc32||'').toUpperCase())}</span><span>SHA-1 ${esc((rec.sha1||'').slice(0,12).toUpperCase())}${rec.sha1?'…':''}</span>`;
+  const fav=$('#favouriteRomBtn');if(fav)fav.textContent=rec.favourite?'★ Favourite':'☆ Add to favourites';
+  const play=$('#playRomBtn');if(play)play.textContent=rec.saveState?'Resume saved game':'Play';
   $('#romDetailsDialog').showModal()
 }
 async function saveDetails({close=true}={}){
@@ -309,7 +408,7 @@ async function saveDetails({close=true}={}){
 }
 
 function jsonSafe(v){return JSON.stringify(v).replace(/</g,'\\u003c')}
-function buildPlayerDocument(rec,blobUrl){
+function buildPlayerDocument(rec,blobUrl,stateUrl=''){
   const controls={0:{
     0:{value:'z',value2:'BUTTON_1'},1:{value:'s',value2:'BUTTON_4'},2:{value:'v',value2:'SELECT'},3:{value:'enter',value2:'START'},
     4:{value:'up arrow',value2:'DPAD_UP'},5:{value:'down arrow',value2:'DPAD_DOWN'},6:{value:'left arrow',value2:'DPAD_LEFT'},7:{value:'right arrow',value2:'DPAD_RIGHT'},
@@ -323,7 +422,9 @@ function buildPlayerDocument(rec,blobUrl){
   window.EJS_core=${jsonSafe(rec.core)};
   window.EJS_gameUrl=${jsonSafe(blobUrl)};
   window.EJS_gameName=${jsonSafe(rec.title)};
+  window.EJS_gameID=${jsonSafe(Number.parseInt((rec.sha1||rec.crc32||'1').slice(0,7),16)||1)};
   window.EJS_pathtodata=${jsonSafe(EJS_DATA)};
+  window.EJS_loadStateURL=${jsonSafe(stateUrl)};
   window.EJS_startOnLoaded=true;
   window.EJS_backgroundColor='#000000';
   window.EJS_color='#e8b64c';
@@ -376,27 +477,46 @@ function sendKey(k,down){
 }
 function pulseKey(k,ms=140){sendKey(k,true);clearTimeout(pulseKey._t?.[k]);pulseKey._t=pulseKey._t||{};pulseKey._t[k]=setTimeout(()=>sendKey(k,false),ms)}
 function setSystemLabel(btn,label){if(!btn)return;btn.innerHTML=`<span class="systemDot"></span><strong>${esc(label)}</strong>`}
-async function playRom(rec){
+async function captureActiveState({quiet=true}={}){
+  if(!active||!activeId||!playerFrame?.contentWindow)return false;
+  try{
+    const gm=playerFrame.contentWindow.EJS_emulator?.gameManager;if(!gm||typeof gm.getState!=='function')return false;
+    const state=gm.getState();if(!state)return false;
+    const src=state instanceof Uint8Array?state:new Uint8Array(state);
+    const copy=new Uint8Array(src.length);copy.set(src);
+    const rec=await getRecord(activeId);if(!rec)return false;
+    rec.saveState=copy.buffer;rec.saveStateAt=Date.now();await putRecord(rec);
+    const mem=records.find(r=>r.id===rec.id);if(mem){mem.saveState=rec.saveState;mem.saveStateAt=rec.saveStateAt}
+    if(!quiet)notify('Progress saved on this device',1600);return true
+  }catch(e){console.warn('Retro Deck save-state capture failed',e);if(!quiet)notify('This game could not be saved at this moment',2000);return false}
+}
+function startAutoSave(){clearInterval(autoSaveTimer);autoSaveTimer=setInterval(()=>captureActiveState({quiet:true}),60000)}
+async function playRom(rec,{resume=false}={}){
   if(!rec.platform||!rec.core){notify('Select the original platform before playing',2600);await openDetails(rec.id);$('#platformRequiredHint')?.classList.remove('hidden');$('#romPlatformInput')?.classList.add('needsPlatform');$('#romPlatformInput')?.focus?.({preventScroll:true});return}
   const bytes=rec.bytes;if(!bytes){notify('ROM data is missing');return}
-  if(active)exitRom();
+  if(active)await exitRom();
   active=true;activeId=rec.id;activeBlobUrl=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
+  if(activeStateBlobUrl){URL.revokeObjectURL(activeStateBlobUrl);activeStateBlobUrl=null}
+  if(resume&&rec.saveState)activeStateBlobUrl=URL.createObjectURL(new Blob([rec.saveState],{type:'application/octet-stream'}));
   $('#libraryView').classList.remove('active');$('#consoleView').classList.add('active');$('#app').classList.add('game-active');document.body.classList.add('game-active');$('#gameCanvas').classList.add('hidden');$('#javatari-screen').classList.add('hidden');
   window.RetroDeckApp?.setGameAspect?.(SYSTEMS[rec.platform]?.aspect||4/3);
   const host=$('#romEmulatorHost');host.classList.remove('hidden');host.innerHTML='';
-  playerFrame=document.createElement('iframe');playerFrame.className='romPlayerFrame';playerFrame.allow='autoplay; fullscreen; gamepad';playerFrame.setAttribute('allowfullscreen','');playerFrame.srcdoc=buildPlayerDocument(rec,activeBlobUrl);host.appendChild(playerFrame);
+  playerFrame=document.createElement('iframe');playerFrame.className='romPlayerFrame';playerFrame.allow='autoplay; fullscreen; gamepad';playerFrame.setAttribute('allowfullscreen','');playerFrame.srcdoc=buildPlayerDocument(rec,activeBlobUrl,activeStateBlobUrl||'');host.appendChild(playerFrame);
   $('#gameTitle').textContent=rec.title.toUpperCase();$('#hudText').textContent=(SYSTEMS[rec.platform]?.label||'ROM').toUpperCase();$('#romExitBtn').classList.remove('hidden');
   $('#mirrorPad').classList.add('hidden');$('#actionPad').classList.remove('hidden');
   setSystemLabel($('#menuBtn'),'START');setSystemLabel($('#pauseBtn'),'SELECT');
-  rec.lastPlayedAt=Date.now();await putRecord(rec);await reloadRecords();window.RetroDeckApp?.syncControllerDisplay?.();notify('Loading emulator…',3500)
+  rec.lastPlayedAt=Date.now();rec.playCount=(Number(rec.playCount)||0)+1;await putRecord(rec);await reloadRecords();window.RetroDeckApp?.syncControllerDisplay?.();startAutoSave();notify(resume&&activeStateBlobUrl?'Restoring your saved session…':'Loading emulator…',3500)
 }
-function exitRom(){
-  if(!active)return;active=false;activeId=null;
+async function exitRom(){
+  if(!active||exiting)return;exiting=true;clearInterval(autoSaveTimer);autoSaveTimer=0;
+  await captureActiveState({quiet:true});
+  active=false;activeId=null;
   if(playerFrame){playerFrame.remove();playerFrame=null}$('#romEmulatorHost').innerHTML='';$('#romEmulatorHost').classList.add('hidden');
-  if(activeBlobUrl){URL.revokeObjectURL(activeBlobUrl);activeBlobUrl=null}
+  if(activeBlobUrl){URL.revokeObjectURL(activeBlobUrl);activeBlobUrl=null}if(activeStateBlobUrl){URL.revokeObjectURL(activeStateBlobUrl);activeStateBlobUrl=null}
   $('#romExitBtn').classList.add('hidden');setSystemLabel($('#menuBtn'),'MENU');setSystemLabel($('#pauseBtn'),'PAUSE');
   window.RetroDeckApp?.setControllerDisplay?.(false,{quiet:true});
-  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#app').classList.remove('game-active');document.body.classList.remove('game-active');$('#gameCanvas').classList.remove('hidden');renderRecords()
+  $('#consoleView').classList.remove('active');$('#libraryView').classList.add('active');$('#app').classList.remove('game-active');document.body.classList.remove('game-active');$('#gameCanvas').classList.remove('hidden');
+  await reloadRecords();exiting=false
 }
 
 async function sourceSearch(q){
@@ -415,13 +535,16 @@ async function sourceSearch(q){
       $('#sourceStatus').textContent=`My Abandonware · ${items.length} result${items.length===1?'':'s'}${mode}`;
     }
     if(seq!==sourceSearchSeq)return;
+    const local=CLASSICS.filter(x=>Math.max(fuzzyScore(q,x.title),...(x.aliases||[]).map(a=>fuzzyScore(q,a)))>=.42).slice(0,12).map(x=>({title:x.title,platform:SYSTEMS[x.platform]?.label||x.platform,year:x.year,coverUrl:x.art?.[0]||'',art:x.art||[],catalogOnly:true,classicItem:x}));
+    const seen=new Set(items.map(x=>normGameTitle(x.title)));for(const x of local)if(!seen.has(normGameTitle(x.title)))items.push(x);
     latestSourceResults=items;results.innerHTML='';
-    if(!items.length){results.innerHTML='<div class="sourceEmpty">No matching titles found. Try the exact game name.</div>';return}
+    if(!items.length){results.innerHTML='<div class="sourceEmpty">No catalogue match found. You can still use Import to add a ROM copy you own.</div>';return}
     items.slice(0,24).forEach((item,i)=>{
       const detail=[item.platform||'Platform not specified',item.year||''].filter(Boolean).join(' · ');
       const card=document.createElement('article');card.className='discoveryCard';
-      const img=item.coverUrl?`<img src="${esc(item.coverUrl)}" alt="" loading="lazy">`:'<div class="sourceMiniCover">NO ART</div>';
-      card.innerHTML=`<div class="discoverArt">${img}</div><div class="discoverMeta"><strong>${esc(item.title||'Untitled')}</strong><small>${esc(detail)}</small><button type="button" data-i="${i}">${item?.redistributable===true?'ADD TO DECK':'IMPORT OWN ROM'}</button></div>`;
+      const candidates=item.art?.length?item.art:(item.coverUrl?[item.coverUrl]:[]);
+      card.innerHTML=`<div class="discoverArt">${candidates.length?`<img alt="${esc(item.title||'')} cover" loading="lazy">`:'<div class="sourceMiniCover">NO ART</div>'}</div><div class="discoverMeta"><strong>${esc(item.title||'Untitled')}</strong><small>${esc(detail)}</small><button type="button" data-i="${i}">${item?.redistributable===true?'ADD TO DECK':'IMPORT OWN ROM'}</button></div>`;
+      if(candidates.length)installArtFallback(card.querySelector('img'),candidates);
       card.querySelector('button').onclick=()=>chooseSourceRom(item,adapter);results.appendChild(card)
     })
   }catch(e){if(seq!==sourceSearchSeq)return;console.error(e);$('#sourceStatus').textContent=e.message||'Catalogue search failed.';results.innerHTML='<div class="sourceEmpty">Catalogue search is temporarily unavailable. Local import still works.</div>'}
@@ -500,6 +623,10 @@ $('#sourceRomFileInput').onchange=e=>{const f=e.target.files?.[0];e.target.value
 $('#librarySearch').addEventListener('input',()=>{visibleLimit=15;renderRecords()});
 $('#librarySearch').addEventListener('search',()=>{visibleLimit=15;renderRecords()});
 $('#showMoreGamesBtn')?.addEventListener('click',()=>{visibleLimit+=15;renderRecords()});
+$('#showMoreClassicsBtn')?.addEventListener('click',()=>{classicVisibleLimit=Math.min(50,classicVisibleLimit+12);renderClassicCatalog()});
+$('#featurePrev')?.addEventListener('click',()=>{featureIndex--;updateFeaturePosition();scheduleFeatureLoop()});
+$('#featureNext')?.addEventListener('click',()=>{featureIndex++;updateFeaturePosition();scheduleFeatureLoop()});
+const featureRail=$('#featureRail');if(featureRail){featureRail.addEventListener('pointerdown',e=>{featurePointer={id:e.pointerId,x:e.clientX,y:e.clientY};clearInterval(featureTimer);featureRail.setPointerCapture?.(e.pointerId)},{passive:true});featureRail.addEventListener('pointerup',e=>{if(!featurePointer||featurePointer.id!==e.pointerId)return;const dx=e.clientX-featurePointer.x,dy=e.clientY-featurePointer.y;if(Math.abs(dx)>42&&Math.abs(dx)>Math.abs(dy)*1.2){featureIndex+=dx<0?1:-1;updateFeaturePosition()}featurePointer=null;scheduleFeatureLoop()},{passive:true});featureRail.addEventListener('pointercancel',()=>{featurePointer=null;scheduleFeatureLoop()},{passive:true})}
 $('#collectionNavBtn')?.addEventListener('click',()=>switchLibrarySection('collection'));
 $('#discoverNavBtn')?.addEventListener('click',()=>switchLibrarySection('discover'));
 $('#sourceSearchBtn').addEventListener('click',e=>{e.preventDefault();switchLibrarySection('discover');refreshSourceStatus()});
@@ -510,13 +637,15 @@ $('#sourceQuery').addEventListener('input',()=>{clearTimeout(sourceSearchTimer);
 window.addEventListener('retrodeck-source-changed',refreshSourceStatus);
 
 $('#saveRomMetaBtn').onclick=()=>saveDetails();
-$('#playRomBtn').onclick=async()=>{const platform=$('#romPlatformInput').value;const hint=$('#platformRequiredHint');if(!platform){hint?.classList.remove('hidden');$('#romPlatformInput').classList.add('needsPlatform');$('#romPlatformInput').focus({preventScroll:true});notify('Select the original platform before playing',2600);return}hint?.classList.add('hidden');$('#romPlatformInput').classList.remove('needsPlatform');const rec=await saveDetails({close:false});if(rec){$('#romDetailsDialog').close();playRom(rec)}};
+$('#favouriteRomBtn').onclick=async()=>{if(!selectedId)return;const rec=await saveDetails({close:false});if(!rec)return;rec.favourite=!rec.favourite;await putRecord(rec);await reloadRecords();$('#favouriteRomBtn').textContent=rec.favourite?'★ Favourite':'☆ Add to favourites';notify(rec.favourite?'Added to favourites':'Removed from favourites',1500)};
+$('#playRomBtn').onclick=async()=>{const platform=$('#romPlatformInput').value;const hint=$('#platformRequiredHint');if(!platform){hint?.classList.remove('hidden');$('#romPlatformInput').classList.add('needsPlatform');$('#romPlatformInput').focus({preventScroll:true});notify('Select the original platform before playing',2600);return}hint?.classList.add('hidden');$('#romPlatformInput').classList.remove('needsPlatform');const rec=await saveDetails({close:false});if(rec){const resume=!!rec.saveState;$('#romDetailsDialog').close();playRom(rec,{resume})}};
 $('#romPlatformInput').addEventListener('change',()=>{if($('#romPlatformInput').value){$('#platformRequiredHint')?.classList.add('hidden');$('#romPlatformInput').classList.remove('needsPlatform')}});
-$('#deleteRomBtn').onclick=async()=>{if(!selectedId)return;const rec=await getRecord(selectedId);if(!rec)return;if(!confirm(`Remove ${rec.title} from Retro Deck?`))return;await deleteRecord(selectedId);selectedId=null;$('#romDetailsDialog').close();await reloadRecords();updateStorageStatus();notify('Game removed')};
+$('#deleteRomBtn').onclick=async()=>{if(!selectedId)return;const rec=await getRecord(selectedId);if(!rec)return;if(!confirm(`Remove ${rec.title} from Retro Deck?`))return;revokeCoverUrl(selectedId);await deleteRecord(selectedId);selectedId=null;$('#romDetailsDialog').close();await reloadRecords();updateStorageStatus();notify('Game removed')};
 $('#refreshCoverBtn').onclick=async()=>{const rec=await saveDetails({close:false});if(rec){await refreshCoverFor(rec);const fresh=await getRecord(rec.id);if(fresh)showDetailsCover(fresh)}};
 
 window.addEventListener('message',e=>{if(e.data?.type==='retrodeck-emulator-started')notify('Game ready')});
-window.addEventListener('beforeunload',()=>{clearCoverUrls();if(activeBlobUrl)URL.revokeObjectURL(activeBlobUrl)});
+window.addEventListener('pagehide',()=>{if(active)captureActiveState({quiet:true})});
+window.addEventListener('beforeunload',()=>{clearInterval(autoSaveTimer);clearInterval(featureTimer);clearCoverUrls();if(activeBlobUrl)URL.revokeObjectURL(activeBlobUrl);if(activeStateBlobUrl)URL.revokeObjectURL(activeStateBlobUrl)});
 
 let bundledSeedPromise=null;
 async function seedBundledLibrary(){

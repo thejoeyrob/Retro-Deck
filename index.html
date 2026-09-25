@@ -13,7 +13,7 @@
   <title>JW Retro Deck</title>
 </head>
 <body>
-<div id="app" class="app skin-classic">
+<div id="app" class="app skin-nes">
   <header class="topbar">
     <div class="brandLockup" aria-label="JW Retro Deck">
       <div class="brandMark"><span>RD</span></div>
@@ -56,18 +56,11 @@
     </section>
 
     <section id="collectionSection" class="collectionSection" aria-labelledby="myGamesHeading">
-      <section id="spotlightSection" class="spotlightSection hidden" aria-label="Continue playing">
-        <div id="spotlightBackdrop" class="spotlightBackdrop"></div>
-        <div class="spotlightContent">
-          <div class="spotlightKicker">READY TO PLAY</div>
-          <h2 id="spotlightTitle">Game</h2>
-          <p id="spotlightMeta"></p>
-          <div class="spotlightActions">
-            <button id="spotlightPlayBtn" type="button" class="spotlightPlay">▶ PLAY</button>
-            <button id="spotlightDetailsBtn" type="button" class="spotlightDetails">DETAILS</button>
-          </div>
-        </div>
-        <div class="spotlightCover"><img id="spotlightCover" alt=""><div id="spotlightFallback" class="spotlightFallback">GAME</div></div>
+      <section id="featureRail" class="featureRail hidden" aria-label="Quick play and recommendations">
+        <div id="featureTrack" class="featureTrack"></div>
+        <button id="featurePrev" class="featureNav prev" type="button" aria-label="Previous featured game">‹</button>
+        <button id="featureNext" class="featureNav next" type="button" aria-label="Next featured game">›</button>
+        <div id="featureDots" class="featureDots" aria-label="Featured titles"></div>
       </section>
       <div class="sectionHeading">
         <div>
@@ -99,6 +92,11 @@
         <button type="submit" id="sourceSearchSubmit">Search</button>
       </form>
       <div id="sourceResults" class="sourceResults discoveryGrid" aria-live="polite"></div>
+      <section id="classicCatalogSection" class="classicCatalogSection">
+        <div class="sectionHeading classicHeading"><div><h2>Retro Deck 50</h2><p>Acclaimed classics preloaded as discovery entries. Add a ROM copy you own to play.</p></div></div>
+        <div id="classicCatalogGrid" class="classicCatalogGrid"></div>
+        <div class="collectionFooter"><button id="showMoreClassicsBtn" class="showMoreBtn" type="button">Show more classics</button></div>
+      </section>
       <input id="sourceRomFileInput" type="file" hidden accept=".a26,.bin,.rom,.nes,.unf,.unif,.sfc,.smc,.fig,.gb,.gbc,.gba,.md,.gen,.smd,.68k,.sms,.gg,.z64,.n64,.v64,.zip,application/zip,application/octet-stream">
       <p class="sourceFootnote" id="cloudSourceNote">Search finds game metadata and cover art. Add the ROM from a copy you own; Retro Deck stores it locally on this device.</p>
     </section>
@@ -224,6 +222,7 @@
           <div id="romHashLine" class="romHashLine"></div>
           <div class="dialogActions">
             <button type="button" id="playRomBtn" class="wideBtn primary">Play</button>
+            <button type="button" id="favouriteRomBtn" class="wideBtn">☆ Add to favourites</button>
             <button type="button" id="refreshCoverBtn" class="wideBtn">Find artwork</button>
             <button type="button" id="saveRomMetaBtn" class="wideBtn">Save details</button>
             <button type="button" id="deleteRomBtn" class="wideBtn danger">Remove game</button>
@@ -318,6 +317,7 @@
 <script src="./retrodeck-config.js"></script>
 <script src="./retrodeck-cloud.js"></script>
 <script src="./rom-source.js"></script>
+<script src="./classic-catalog.js"></script>
 <script src="./rom-library.js"></script>
 </body>
 </html>

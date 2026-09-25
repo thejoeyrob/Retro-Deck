@@ -1,0 +1,15 @@
+JW Retro Deck v2.0.0 — FEATURED RAIL / CLASSICS / SKIN-LINKED LIBRARY
+
+- Replaced the single featured card with a swipeable, auto-looping featured rail.
+- Jump Back In resumes EmulatorJS save-state snapshots where supported.
+- Added local periodic/exit save-state capture.
+- Added favourites and play-count driven recommendations.
+- Added 50 preloaded retro discovery entries across supported systems.
+- Streets of Rage 1/2/3 are included in the preloaded catalogue.
+- Mountain King remains bundled from the owner's supplied Atari 2600 ROM.
+- Snake remains a built-in Retro Deck Original.
+- Featured and collection covers now use stable independent rendering so artwork does not disappear from collection tiles.
+- Main library/menu colour/material treatment now follows the selected console skin.
+- Added original box-art candidate URLs for the preloaded classics catalogue.
+- Commercial ROM binaries are not bundled or auto-downloaded; the catalogue guides the user to import copies they own.
+- Zero Calibre is not added as a false/broken ROM entry because the current Retro Deck emulator targets do not run the modern PC/Quest VR title.
