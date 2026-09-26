@@ -656,6 +656,11 @@ function buildPlayerDocument(rec,blobUrl,stateUrl=''){
   // and an unwanted native settings/cache-manager/etc menu popping up. Turning all of
   // EmulatorJS's own UI chrome off makes Retro Deck's controls the only interface.
   window.EJS_Buttons={playPause:false,restart:false,mute:false,settings:false,fullscreen:false,saveState:false,loadState:false,screenRecord:false,gamepad:false,cheat:false,volume:false,saveSavFiles:false,loadSavFiles:false,quickSave:false,quickLoad:false,screenshot:false,cacheManager:false,exitEmulation:false,contextMenu:false};
+  // Hiding the gamepad button above only removes the toggle icon - it does not stop the
+  // pad itself from auto-appearing on touch devices, which is the actual "always on, has to
+  // be manually turned off" bug. EJS_defaultOptions applies its own settings menu default,
+  // which is the flag that actually suppresses the on-screen pad from ever showing.
+  window.EJS_defaultOptions={'virtual-gamepad':'disabled'};
   window.__RETRO_INPUT_INDEX=${jsonSafe(inputIndex)};
   function retroFocus(){try{window.focus();document.body.focus();var c=document.querySelector('canvas');if(c){c.tabIndex=0;c.focus({preventScroll:true})}}catch(e){}}
   function keyboardFallback(d){
