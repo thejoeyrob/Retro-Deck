@@ -53,7 +53,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .catalogueSource{display:flex;align-items:center;gap:10px;margin-bottom:14px}.catalogueSource strong,.catalogueSource small{display:block}.catalogueSource strong{font-size:13px}.catalogueSource small{font-size:10px;color:#848a93;margin-top:3px}.sourceLight{width:8px;height:8px;border-radius:50%;background:#5cd67b;box-shadow:0 0 10px #5cd67b66}.sourceSearchBar{display:grid;grid-template-columns:1fr 92px;border:1px solid #3a3d43;background:#090b0d;margin-bottom:14px}.sourceSearchBar:focus-within{border-color:#858b95}.sourceSearchBar input{height:48px;border:0;outline:0;background:transparent;color:#fff;padding:0 14px;font-size:15px}.sourceSearchBar input::placeholder{color:#656b74}.sourceSearchBar button{border:0;border-left:1px solid #3a3d43;background:#e4b655;color:#15120c;font-weight:800;font-size:12px}.sourceResults{display:grid;border-top:1px solid #292c31;margin-top:8px}.sourceResult{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #25282d;background:transparent}.sourceResult img,.sourceMiniCover{width:52px;height:68px;object-fit:contain;background:#090a0c;border:1px solid #292c31}.sourceMiniCover{display:grid;place-items:center;color:#8f949c;font-size:8px;font-weight:800}.sourceResult strong,.sourceResult small{display:block}.sourceResult strong{font-size:13px}.sourceResult small{font-size:10px;color:#7f858e;margin-top:4px}.sourceResult button{height:36px;border:1px solid #c79a3e;background:#e4b655;color:#17130d;border-radius:5px;padding:0 11px;font-size:10px;font-weight:850}.sourceEmpty{padding:28px 8px;text-align:center;color:#858b94;font-size:12px}.sourceFootnote{margin:16px 0 0}
 
 /* Settings and achievements */
-.skinGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.skinChoice{aspect-ratio:5/3;border:1px solid #33363b;border-radius:5px;color:white;text-align:left;padding:0;position:relative;overflow:hidden;background:#0c0d0f}.skinChoice img{width:100%;height:100%;object-fit:cover;display:block}.skinChoice:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#000d,transparent 65%)}.skinChoice.locked img{filter:grayscale(.9) brightness(.45)}.skinChoice.selected{border-color:#efc86e;box-shadow:0 0 0 1px #efc86e}.skinChoice span,.skinChoice small{position:absolute;z-index:3;left:9px;right:9px}.skinChoice span{bottom:24px;font-size:11px;font-weight:800}.skinChoice small{bottom:8px;font-size:8px;color:#c0c4ca}.settingSection{border-top:1px solid #2a2d31;margin-top:18px;padding-top:14px}.colourGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.colourGrid label{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #2d3035;padding:9px;font-size:11px}.colourGrid input{width:34px;height:28px;border:0;background:none}.switchRow{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #26292d;font-size:12px}.achievementList{display:grid}.achievement{border-bottom:1px solid #292c31;padding:13px 0;display:grid;grid-template-columns:36px 1fr;gap:11px;align-items:center}.achievement .medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1b1e22;border:1px solid #33363b}.achievement.locked{opacity:.45}.achievement strong,.achievement small{display:block}.achievement small{font-size:10px;color:#858b94;margin-top:3px}.requestList{margin-top:12px;display:grid}.requestItem{border-bottom:1px solid #292c30;padding:10px 0;font-size:12px}.requestItem small{display:block;color:#858b94;margin-top:3px}
+.skinGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.skinChoice{aspect-ratio:5/3;border:1px solid #33363b;border-radius:5px;color:white;text-align:left;padding:0;position:relative;overflow:hidden;background:#0c0d0f}.skinChoice img{width:100%;height:100%;object-fit:cover;display:block}.skinChoice:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#000d,transparent 65%)}.skinChoice.locked img{filter:grayscale(.9) brightness(.45)}.skinChoice.selected{border-color:#efc86e;box-shadow:0 0 0 1px #efc86e}.skinChoice span,.skinChoice small{position:absolute;z-index:3;left:9px;right:9px}.skinChoice span{bottom:24px;font-size:11px;font-weight:800}.skinChoice small{bottom:8px;font-size:8px;color:#c0c4ca}
+.skinSwatch{position:relative;width:100%;aspect-ratio:5/3;border-radius:4px;overflow:hidden;background:linear-gradient(145deg,var(--device),var(--device2));border:1px solid var(--trim2)}
+.skinChoice.locked .skinSwatch{filter:grayscale(.9) brightness(.45)}
+.skinSwatchScreen{position:absolute;left:12%;right:12%;top:16%;height:32%;background:#0b0d0f;border-radius:3px;box-shadow:inset 0 0 0 1px #000}
+.skinSwatchPad{position:absolute;left:12%;bottom:14%;width:15%;aspect-ratio:1;background:var(--trim);border-radius:3px}
+.skinSwatchBtns{position:absolute;right:12%;bottom:14%;width:13%;aspect-ratio:1;background:var(--trim2);border-radius:50%;box-shadow:9px 3px 0 -1px var(--trim2),-3px 9px 0 -1px var(--trim)}
+.settingSection{border-top:1px solid #2a2d31;margin-top:18px;padding-top:14px}.colourGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.colourGrid label{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #2d3035;padding:9px;font-size:11px}.colourGrid input{width:34px;height:28px;border:0;background:none}.switchRow{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #26292d;font-size:12px}.achievementList{display:grid}.achievement{border-bottom:1px solid #292c31;padding:13px 0;display:grid;grid-template-columns:36px 1fr;gap:11px;align-items:center}.achievement .medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1b1e22;border:1px solid #33363b}.achievement.locked{opacity:.45}.achievement strong,.achievement small{display:block}.achievement small{font-size:10px;color:#858b94;margin-top:3px}.requestList{margin-top:12px;display:grid}.requestItem{border-bottom:1px solid #292c30;padding:10px 0;font-size:12px}.requestItem small{display:block;color:#858b94;margin-top:3px}
 
 /* Console skins now affect hardware material only; layout stays professional */
 .skin-classic{--device:#292b2f;--device2:#121416}.skin-charcoal{--device:#23262a;--device2:#0c0e10}.skin-red{--device:#352225;--device2:#160e10}.skin-ice{--device:#263037;--device2:#11171b}.skin-neon{--device:#202133;--device2:#0d0e18}.skin-carbon{--device:#252729;--device2:#0d0e0f}.skin-sunset{--device:#342726;--device2:#171010}.skin-arcade{--device:#2b2433;--device2:#100d14}
@@ -267,14 +273,22 @@ button,input,textarea,select{font-family:var(--rd-font)}
 .overlayBtn{height:38px;min-width:88px;padding:0 14px;border:1px solid #ffffff36;background:linear-gradient(180deg,#ffffff22,#00000055);backdrop-filter:blur(10px);color:#f7f7f8;border-radius:999px;font-family:var(--rd-micro);font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;box-shadow:0 6px 18px #0009}
 .overlayBtn:active{transform:translateY(1px);background:linear-gradient(180deg,#ffffff2d,#00000072)}
 
-.app.skin-nes{--device:#d6d8db;--device2:#8d939b;--trim:#626870;--trim2:#5f6670;--shellHigh:#ffffff80;--shellLow:#00000028;--shellShadow:#000000aa}
-.app.skin-snes{--device:#d9dce2;--device2:#a7adb7;--trim:#7c728f;--trim2:#6a7180;--shellHigh:#ffffff60;--shellLow:#00000022;--shellShadow:#000000b2}
-.app.skin-gameboy{--device:#aeb6a2;--device2:#707861;--trim:#616952;--trim2:#535b47;--shellHigh:#ffffff30;--shellLow:#00000024;--shellShadow:#000000c0}
-.app.skin-mastersystem{--device:#d9dce0;--device2:#9ea5ad;--trim:#23272d;--trim2:#20252b;--shellHigh:#ffffff55;--shellLow:#00000022;--shellShadow:#000000b4}
-.app.skin-psp{--device:#171b22;--device2:#050709;--trim:#adb5c0;--trim2:#616a77;--shellHigh:#ffffff10;--shellLow:#00000055;--shellShadow:#000000e0}
-.app.skin-switch{--device:#11161c;--device2:#05080b;--trim:#c1c8d0;--trim2:#5b6370;--shellHigh:#ffffff14;--shellLow:#00000062;--shellShadow:#000000e2}
-.app.skin-carbon{--device:#20242a;--device2:#090b0e;--trim:#d0d4da;--trim2:#68707a;--shellHigh:#ffffff14;--shellLow:#00000060;--shellShadow:#000000e0}
-.app.skin-neon{--device:#202033;--device2:#0a0a16;--trim:#d4d6ff;--trim2:#8187e4;--shellHigh:#ffffff14;--shellLow:#00000060;--shellShadow:#000000e0}
+.app.skin-nes,.skinSwatch.skin-nes{--device:#d6d8db;--device2:#8d939b;--trim:#626870;--trim2:#5f6670;--shellHigh:#ffffff80;--shellLow:#00000028;--shellShadow:#000000aa}
+.app.skin-snes,.skinSwatch.skin-snes{--device:#d9dce2;--device2:#a7adb7;--trim:#7c728f;--trim2:#6a7180;--shellHigh:#ffffff60;--shellLow:#00000022;--shellShadow:#000000b2}
+.app.skin-gameboy,.skinSwatch.skin-gameboy{--device:#9ba989;--device2:#5e6a4e;--trim:#4d5540;--trim2:#414a35;--shellHigh:#ffffff28;--shellLow:#00000026;--shellShadow:#000000c4}
+.app.skin-mastersystem,.skinSwatch.skin-mastersystem{--device:#1c1e21;--device2:#050608;--trim:#c8383f;--trim2:#8f2228;--shellHigh:#ffffff16;--shellLow:#00000060;--shellShadow:#000000e0}
+.app.skin-psp,.skinSwatch.skin-psp{--device:#171b22;--device2:#050709;--trim:#adb5c0;--trim2:#616a77;--shellHigh:#ffffff10;--shellLow:#00000055;--shellShadow:#000000e0}
+.app.skin-switch,.skinSwatch.skin-switch{--device:#11161c;--device2:#05080b;--trim:#c1c8d0;--trim2:#5b6370;--shellHigh:#ffffff14;--shellLow:#00000062;--shellShadow:#000000e2}
+.app.skin-carbon,.skinSwatch.skin-carbon{--device:#20242a;--device2:#090b0e;--trim:#d0d4da;--trim2:#68707a;--shellHigh:#ffffff14;--shellLow:#00000060;--shellShadow:#000000e0}
+.app.skin-neon,.skinSwatch.skin-neon{--device:#202033;--device2:#0a0a16;--trim:#d4d6ff;--trim2:#8187e4;--shellHigh:#ffffff14;--shellLow:#00000060;--shellShadow:#000000e0}
+.app.skin-classic,.skinSwatch.skin-classic{--device:#3a3d42;--device2:#17191c;--trim:#c7ccd3;--trim2:#787f88;--shellHigh:#ffffff18;--shellLow:#00000050;--shellShadow:#000000d8}
+.app.skin-charcoal,.skinSwatch.skin-charcoal{--device:#2a2d31;--device2:#0e1012;--trim:#8b929b;--trim2:#4c515a;--shellHigh:#ffffff12;--shellLow:#00000058;--shellShadow:#000000dc}
+.app.skin-red,.skinSwatch.skin-red{--device:#3d1c1e;--device2:#150708;--trim:#ff5a5a;--trim2:#932f2f;--shellHigh:#ffffff14;--shellLow:#00000058;--shellShadow:#000000e0}
+.app.skin-ice,.skinSwatch.skin-ice{--device:#c9dbe8;--device2:#7f9fb3;--trim:#4a92c4;--trim2:#3a6f92;--shellHigh:#ffffff70;--shellLow:#00000020;--shellShadow:#000000a8}
+.app.skin-sunset,.skinSwatch.skin-sunset{--device:#3d2418;--device2:#160c08;--trim:#ff8a3d;--trim2:#c65a1f;--shellHigh:#ffffff16;--shellLow:#00000055;--shellShadow:#000000e0}
+.app.skin-arcade,.skinSwatch.skin-arcade{--device:#241b30;--device2:#0a0710;--trim:#00e5ff;--trim2:#ff2fd6;--shellHigh:#ffffff16;--shellLow:#00000060;--shellShadow:#000000e2}
+.app.skin-gold,.skinSwatch.skin-gold{--device:#4a3a12;--device2:#1c1404;--trim:#f4cf5e;--trim2:#a9822a;--shellHigh:#ffffff30;--shellLow:#00000045;--shellShadow:#000000d0}
+.app.skin-prism,.skinSwatch.skin-prism{--device:#241f33;--device2:#0a0812;--trim:#ff5fd1;--trim2:#5fe0ff;--shellHigh:#ffffff1c;--shellLow:#00000058;--shellShadow:#000000e0}
 
 .app.skin-nes .consoleShell,.app.skin-snes .consoleShell,.app.skin-gameboy .consoleShell,.app.skin-mastersystem .consoleShell{border-color:#757d87}
 .app.skin-switch .leftZone,.app.skin-switch .rightZone{position:relative}
@@ -285,6 +299,11 @@ button,input,textarea,select{font-family:var(--rd-font)}
 .app.skin-gameboy .screenBezel{border-radius:12px;padding:16px 10px 18px;background:linear-gradient(180deg,#2d3130,#080b0c)}
 .app.skin-gameboy .screenStage{border-radius:4px;box-shadow:inset 0 0 0 1px #6b765e}
 .app.skin-mastersystem .screenBezel{padding:10px;background:linear-gradient(180deg,#0d0f12,#000)}
+.app.skin-mastersystem .consoleTopRail{border-bottom-color:#c8383f55}
+.app.skin-gold .consoleShell{background:radial-gradient(90% 120% at 50% 0,#ffe9a655,transparent 45%),repeating-linear-gradient(90deg,#ffffff08 0 1px,#0000 1px 4px),linear-gradient(145deg,var(--device),var(--device2));box-shadow:inset 0 1px #ffffff30,0 0 0 1px #f4cf5e33}
+.app.skin-arcade .consoleShell,.app.skin-prism .consoleShell{box-shadow:inset 0 1px #ffffff18,0 0 24px 2px var(--trim2),0 0 0 1px var(--trim)}
+.app.skin-prism .consoleShell{animation:rdPrismGlow 6s ease-in-out infinite}
+@keyframes rdPrismGlow{0%,100%{box-shadow:inset 0 1px #ffffff18,0 0 24px 2px #ff5fd1,0 0 0 1px #ff5fd1}50%{box-shadow:inset 0 1px #ffffff18,0 0 26px 3px #5fe0ff,0 0 0 1px #5fe0ff}}
 
 @media (orientation:portrait){
   .consoleShell{grid-template-columns:1fr 1fr;grid-template-rows:42px minmax(0,1fr) minmax(170px,31vh) 44px;gap:8px 12px;padding:8px 12px 8px}
@@ -541,14 +560,22 @@ body.game-active{background:#000}
   --menu-text:#f5f6f7;
   --menu-muted:#8f99a5;
 }
-.app.skin-nes{--menu-accent:#d8474f;--menu-accent-2:#858b93;--menu-bg-0:#101214;--menu-bg-1:#272b30;--menu-panel:#171a1e;--menu-panel-2:#24282d;--menu-line:#626871}
-.app.skin-snes{--menu-accent:#7563a4;--menu-accent-2:#b6a9c9;--menu-bg-0:#101014;--menu-bg-1:#282633;--menu-panel:#171720;--menu-panel-2:#252431;--menu-line:#5b5868}
-.app.skin-gameboy{--menu-accent:#844d72;--menu-accent-2:#84906f;--menu-bg-0:#11140f;--menu-bg-1:#252b20;--menu-panel:#171c14;--menu-panel-2:#262d22;--menu-line:#626a56}
-.app.skin-mastersystem{--menu-accent:#ef8a28;--menu-accent-2:#d43b42;--menu-bg-0:#0f1114;--menu-bg-1:#25292e;--menu-panel:#171a1f;--menu-panel-2:#24282e;--menu-line:#636a73}
-.app.skin-psp{--menu-accent:#5a89d8;--menu-accent-2:#8db7ff;--menu-bg-0:#030507;--menu-bg-1:#10151c;--menu-panel:#090d12;--menu-panel-2:#111820;--menu-line:#303945}
-.app.skin-switch{--menu-accent:#21bfe8;--menu-accent-2:#ec4f61;--menu-bg-0:#05080b;--menu-bg-1:#111820;--menu-panel:#0a1016;--menu-panel-2:#121b24;--menu-line:#33414e}
-.app.skin-carbon{--menu-accent:#d4a94d;--menu-accent-2:#707984;--menu-bg-0:#040506;--menu-bg-1:#111418;--menu-panel:#0b0d10;--menu-panel-2:#15191e;--menu-line:#353b43}
-.app.skin-neon{--menu-accent:#8c7cff;--menu-accent-2:#ea5b9e;--menu-bg-0:#070610;--menu-bg-1:#19152b;--menu-panel:#0f0c1d;--menu-panel-2:#1a1530;--menu-line:#4f456f}
+.app.skin-nes,.skinSwatch.skin-nes{--menu-accent:#d8474f;--menu-accent-2:#858b93;--menu-bg-0:#101214;--menu-bg-1:#272b30;--menu-panel:#171a1e;--menu-panel-2:#24282d;--menu-line:#626871}
+.app.skin-snes,.skinSwatch.skin-snes{--menu-accent:#7563a4;--menu-accent-2:#b6a9c9;--menu-bg-0:#101014;--menu-bg-1:#282633;--menu-panel:#171720;--menu-panel-2:#252431;--menu-line:#5b5868}
+.app.skin-gameboy,.skinSwatch.skin-gameboy{--menu-accent:#844d72;--menu-accent-2:#84906f;--menu-bg-0:#11140f;--menu-bg-1:#252b20;--menu-panel:#171c14;--menu-panel-2:#262d22;--menu-line:#626a56}
+.app.skin-mastersystem,.skinSwatch.skin-mastersystem{--menu-accent:#ef8a28;--menu-accent-2:#d43b42;--menu-bg-0:#0f1114;--menu-bg-1:#25292e;--menu-panel:#171a1f;--menu-panel-2:#24282e;--menu-line:#636a73}
+.app.skin-psp,.skinSwatch.skin-psp{--menu-accent:#5a89d8;--menu-accent-2:#8db7ff;--menu-bg-0:#030507;--menu-bg-1:#10151c;--menu-panel:#090d12;--menu-panel-2:#111820;--menu-line:#303945}
+.app.skin-switch,.skinSwatch.skin-switch{--menu-accent:#21bfe8;--menu-accent-2:#ec4f61;--menu-bg-0:#05080b;--menu-bg-1:#111820;--menu-panel:#0a1016;--menu-panel-2:#121b24;--menu-line:#33414e}
+.app.skin-carbon,.skinSwatch.skin-carbon{--menu-accent:#d4a94d;--menu-accent-2:#707984;--menu-bg-0:#040506;--menu-bg-1:#111418;--menu-panel:#0b0d10;--menu-panel-2:#15191e;--menu-line:#353b43}
+.app.skin-neon,.skinSwatch.skin-neon{--menu-accent:#8c7cff;--menu-accent-2:#ea5b9e;--menu-bg-0:#070610;--menu-bg-1:#19152b;--menu-panel:#0f0c1d;--menu-panel-2:#1a1530;--menu-line:#4f456f}
+.app.skin-classic,.skinSwatch.skin-classic{--menu-accent:#c7ccd3;--menu-accent-2:#787f88;--menu-bg-0:#0d0e10;--menu-bg-1:#232629;--menu-panel:#16181a;--menu-panel-2:#212427;--menu-line:#454a50}
+.app.skin-charcoal,.skinSwatch.skin-charcoal{--menu-accent:#8b929b;--menu-accent-2:#4c515a;--menu-bg-0:#0a0b0c;--menu-bg-1:#1e2023;--menu-panel:#131416;--menu-panel-2:#1c1e21;--menu-line:#3a3d42}
+.app.skin-red,.skinSwatch.skin-red{--menu-accent:#ff5a5a;--menu-accent-2:#932f2f;--menu-bg-0:#0d0607;--menu-bg-1:#251314;--menu-panel:#180b0c;--menu-panel-2:#241416;--menu-line:#4d2426}
+.app.skin-ice,.skinSwatch.skin-ice{--menu-accent:#4a92c4;--menu-accent-2:#7f9fb3;--menu-bg-0:#0a1116;--menu-bg-1:#182631;--menu-panel:#111c22;--menu-panel-2:#1b2b34;--menu-line:#33475a}
+.app.skin-sunset,.skinSwatch.skin-sunset{--menu-accent:#ff8a3d;--menu-accent-2:#c65a1f;--menu-bg-0:#0d0806;--menu-bg-1:#241610;--menu-panel:#170f0a;--menu-panel-2:#221510;--menu-line:#4a2c1d}
+.app.skin-arcade,.skinSwatch.skin-arcade{--menu-accent:#00e5ff;--menu-accent-2:#ff2fd6;--menu-bg-0:#0a0710;--menu-bg-1:#1c1428;--menu-panel:#120d1c;--menu-panel-2:#1e1530;--menu-line:#3d2c54}
+.app.skin-gold,.skinSwatch.skin-gold{--menu-accent:#f4cf5e;--menu-accent-2:#a9822a;--menu-bg-0:#0e0a02;--menu-bg-1:#221a08;--menu-panel:#181205;--menu-panel-2:#231a0a;--menu-line:#4d3c14}
+.app.skin-prism,.skinSwatch.skin-prism{--menu-accent:#ff5fd1;--menu-accent-2:#5fe0ff;--menu-bg-0:#0a0812;--menu-bg-1:#1c1730;--menu-panel:#130f22;--menu-panel-2:#1e1836;--menu-line:#3e3260}
 
 .app .libraryView{
   background:
@@ -605,6 +632,7 @@ body.game-active{background:#000}
 .manageViewTab{height:34px;padding:0 15px;border:1px solid #34373d;background:#121418;color:#c6c9ce;border-radius:6px;font-size:11px;font-weight:750}
 .manageViewTab.is-active{background:#e4b655;border-color:#f3d583;color:#15120c}
 .manageContent{min-height:160px}
+.manageBackupRow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid #292c31}
 .manageGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:14px}
 .manageTile{border:1px solid #2d3036;background:#121417;border-radius:6px;padding:0;overflow:hidden;text-align:left;cursor:grab;touch-action:none;color:inherit}
 .manageTile.dragging{opacity:.55;cursor:grabbing}

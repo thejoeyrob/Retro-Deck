@@ -259,6 +259,12 @@
       </div>
       <div id="manageContent" class="manageContent"></div>
       <p class="smallNote">Drag a tile to reorder your collection. Tap a game to rename it, change its platform, or remove it.</p>
+      <div class="manageBackupRow">
+        <button type="button" id="exportLibraryBtn" class="wideBtn">Back up library to a file</button>
+        <button type="button" id="importLibraryBtn" class="wideBtn">Restore from a backup file</button>
+        <input id="importLibraryFileInput" type="file" hidden accept="application/json,.json">
+      </div>
+      <p class="smallNote">Your games live only in this device's browser storage - if it's ever cleared (or you switch devices/browsers), nothing else has a copy. Back up to a file after adding games, and keep that file somewhere safe.</p>
     </div>
   </dialog>
 

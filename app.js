@@ -96,7 +96,15 @@ const skins=[
   {id:'psp',name:'Portable Black',unlock:null},
   {id:'switch',name:'Switch Neon',unlock:null},
   {id:'carbon',name:'Carbon Black',unlock:null},
-  {id:'neon',name:'Neon Circuit',unlock:'snake10'}
+  {id:'classic',name:'Classic Grey',unlock:null},
+  {id:'charcoal',name:'Charcoal',unlock:null},
+  {id:'ice',name:'Arctic Ice',unlock:null},
+  {id:'red',name:'Crimson',unlock:null},
+  {id:'sunset',name:'Sunset Orange',unlock:null},
+  {id:'neon',name:'Neon Circuit',unlock:'snake10'},
+  {id:'arcade',name:'★ Arcade Cabinet',unlock:null},
+  {id:'gold',name:'★ Gold Edition',unlock:null},
+  {id:'prism',name:'★ Prism Glow',unlock:null}
 ];
 function skinUnlocked(s){return !s.unlock||!!stats.achievements[s.unlock]}
 function fillButtonProfiles(){
@@ -121,7 +129,7 @@ function applyPrefs(){
   $('#dpad')?.classList.toggle('hidden',(prefs.movementMode||'dpad')==='stick');
   $('#analogPad')?.classList.toggle('hidden',(prefs.movementMode||'dpad')!=='stick');
 }
-function renderSkins(){const el=$('#skinGrid');el.innerHTML='';skins.forEach(s=>{const b=document.createElement('button');b.type='button';b.className=`skinChoice ${prefs.skin===s.id?'selected':''} ${skinUnlocked(s)?'':'locked'}`;b.innerHTML=`<img src="./skin-${s.id}.jpg" alt=""><span>${s.name}</span><small>${skinUnlocked(s)?(s.unlock?'Unlocked':'Included'):`🔒 ${achievements[s.unlock].desc}`}</small>`;b.onclick=()=>{audio.click();if(!skinUnlocked(s)){toast(achievements[s.unlock].desc);return}prefs.skin=s.id;saveAll();applyPrefs();renderSkins()};el.appendChild(b)})}
+function renderSkins(){const el=$('#skinGrid');el.innerHTML='';skins.forEach(s=>{const b=document.createElement('button');b.type='button';b.className=`skinChoice ${prefs.skin===s.id?'selected':''} ${skinUnlocked(s)?'':'locked'}`;b.innerHTML=`<div class="skinSwatch skin-${s.id}"><span class="skinSwatchScreen"></span><span class="skinSwatchPad"></span><span class="skinSwatchBtns"></span></div><span>${s.name}</span><small>${skinUnlocked(s)?(s.unlock?'Unlocked':'Included'):`🔒 ${achievements[s.unlock].desc}`}</small>`;b.onclick=()=>{audio.click();if(!skinUnlocked(s)){toast(achievements[s.unlock].desc);return}prefs.skin=s.id;saveAll();applyPrefs();renderSkins()};el.appendChild(b)})}
 function renderAchievements(){const el=$('#achievementList');el.innerHTML='';Object.entries(achievements).forEach(([id,a])=>{const ok=!!stats.achievements[id];const d=document.createElement('div');d.className=`achievement ${ok?'':'locked'}`;d.innerHTML=`<div class="medal">${ok?'★':'○'}</div><div><strong>${a.title}</strong><small>${a.desc}<br>${a.reward}</small></div>`;el.appendChild(d)})}
 ['dpad','a','b','x','y'].forEach(k=>{$(`#${k}Colour`).addEventListener('input',e=>{prefs.buttons[k]=e.target.value;prefs.buttonProfile='custom';saveAll();applyPrefs()})});
 $('#buttonProfileSelect').onchange=e=>setButtonProfile(e.target.value);

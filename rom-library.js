@@ -846,6 +846,55 @@ bindSystemButton(pause,'select',oldPause);
 $('#romExitBtn').onclick=exitRom;
 $('#importRomBtn').onclick=()=>$('#romFileInput').click();
 $('#romFileInput').onchange=e=>importFiles([...e.target.files]);
+function bufToB64(buf){let bin='';const bytes=new Uint8Array(buf);const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)bin+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(bin)}
+function b64ToBuf(b64){const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return bytes.buffer}
+async function blobToB64(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=()=>reject(r.error);r.readAsDataURL(blob)})}
+async function exportLibrary(){
+  const all=await allRecords();
+  if(!all.length){notify('No games in your library yet - nothing to back up.');return}
+  const out=[];
+  for(const rec of all){
+    const copy={...rec};
+    if(copy.bytes)copy.bytes=bufToB64(copy.bytes);
+    if(copy.saveState)copy.saveState=bufToB64(copy.saveState);
+    if(copy.coverBlob){copy.coverBlobB64=await blobToB64(copy.coverBlob);copy.coverBlobType=copy.coverBlob.type||'image/png';delete copy.coverBlob}
+    out.push(copy);
+  }
+  const payload={app:'jw-retro-deck',exportVersion:1,exportedAt:Date.now(),count:out.length,records:out};
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`retro-deck-library-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  notify(`Backed up ${out.length} game${out.length===1?'':'s'} to a file.`);
+}
+async function importLibraryFile(file){
+  let payload;
+  try{payload=JSON.parse(await file.text())}catch{notify('That file is not a valid Retro Deck backup.');return}
+  if(!payload||!Array.isArray(payload.records)){notify('That file is not a valid Retro Deck backup.');return}
+  const existing=await allRecords();
+  const existingKeys=new Set(existing.map(r=>r.sha1||r.crc32||r.id));
+  let added=0,skipped=0;
+  for(const raw of payload.records){
+    const key=raw.sha1||raw.crc32||raw.id;
+    if(key&&existingKeys.has(key)){skipped++;continue}
+    const rec={...raw};
+    if(typeof rec.bytes==='string')rec.bytes=b64ToBuf(rec.bytes);
+    if(typeof rec.saveState==='string')rec.saveState=b64ToBuf(rec.saveState);
+    if(rec.coverBlobB64){rec.coverBlob=await(await fetch(`data:${rec.coverBlobType||'image/png'};base64,${rec.coverBlobB64}`)).blob();delete rec.coverBlobB64;delete rec.coverBlobType}
+    rec.kind='library-rom';
+    if(!rec.id||existingKeys.has(rec.id))rec.id=uuid();
+    await putRecord(rec);
+    existingKeys.add(key||rec.id);
+    added++;
+  }
+  await reloadRecords();updateStorageStatus();
+  notify(`Restored ${added} game${added===1?'':'s'}${skipped?`, ${skipped} already in your library`:''}.`,3200);
+}
+$('#exportLibraryBtn')?.addEventListener('click',()=>exportLibrary().catch(err=>{console.warn('export failed',err);notify('Backup failed - see console for details.')}));
+$('#importLibraryBtn')?.addEventListener('click',()=>$('#importLibraryFileInput').click());
+$('#importLibraryFileInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];e.target.value='';if(f)importLibraryFile(f).catch(err=>{console.warn('import failed',err);notify('Restore failed - see console for details.')})});
 $('#sourceRomFileInput').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(f)importChosenSourceRom(f)};
 $('#librarySearch').addEventListener('input',()=>{visibleLimit=15;renderRecords()});
 $('#librarySearch').addEventListener('search',()=>{visibleLimit=15;renderRecords()});
